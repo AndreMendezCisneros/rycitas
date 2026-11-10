@@ -15,8 +15,6 @@ def secretos_de_produccion(app_configs, **kwargs):
         for nombre in (
             "SECRET_KEY",
             "JWT_SECRET",
-            "TURNSTILE_SECRET",
-            "TURNSTILE_SITE_KEY",
             "FIREBASE_PROJECT_ID",
             "FIREBASE_CREDENCIALES",
             *(("WHATSAPP_APP_SECRET", "WHATSAPP_VERIFY_TOKEN") if settings.VERIFICACION_WHATSAPP else ()),
@@ -24,6 +22,13 @@ def secretos_de_produccion(app_configs, **kwargs):
         if not getattr(settings, nombre)
     ]
     errores = [Error(f"Falta configurar {n} en el entorno", id="denticita.E001") for n in faltantes]
+    # Código propio para poder omitirlo de forma explícita (CHEQUEOS_OMITIDOS) mientras se crea el widget: sin él,
+    # las reservas web se rechazan (mensajeria/turnstile.py), pero la app y el panel funcionan.
+    errores += [
+        Error(f"Falta configurar {n} en el entorno: sin Turnstile se rechazan las reservas web", id="denticita.E007")
+        for n in ("TURNSTILE_SECRET", "TURNSTILE_SITE_KEY")
+        if not getattr(settings, n)
+    ]
 
     if settings.JWT_SECRET and settings.JWT_SECRET == settings.SECRET_KEY:
         errores.append(

@@ -179,6 +179,9 @@ MAX_EVENTOS_IP_HORA = int(os.environ.get("MAX_EVENTOS_IP_HORA", "120"))
 
 TURNSTILE_SITE_KEY = os.environ.get("TURNSTILE_SITE_KEY", "")
 TURNSTILE_SECRET = os.environ.get("TURNSTILE_SECRET", "")
+# Chequeos de despliegue omitidos a propósito, separados por comas (p. ej. denticita.E006 mientras falta el titular).
+# Queda escrito en el .env del servidor: es una decisión visible, no un olvido.
+SILENCED_SYSTEM_CHECKS = [c.strip() for c in os.environ.get("CHEQUEOS_OMITIDOS", "").split(",") if c.strip()]
 # Sin la API de WhatsApp Cloud, la reserva web queda por confirmar y el doctor escribe al paciente desde su
 # propio WhatsApp. Con 1 vuelve la verificación por mensaje entrante (webhook de Meta).
 VERIFICACION_WHATSAPP = os.environ.get("VERIFICACION_WHATSAPP", "0") == "1"

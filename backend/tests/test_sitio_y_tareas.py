@@ -171,7 +171,7 @@ def test_chequeo_de_despliegue_pasa_con_la_configuracion_completa():
 def test_chequeo_de_despliegue_exige_los_secretos():
     with override_settings(**{**PRODUCCION, "TURNSTILE_SECRET": ""}):
         errores = secretos_de_produccion(None)
-    assert [e.msg for e in errores] == ["Falta configurar TURNSTILE_SECRET en el entorno"]
+    assert [e.id for e in errores] == ["denticita.E007"]
 
 
 @pytest.mark.parametrize(
