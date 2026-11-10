@@ -14,10 +14,20 @@ if (hayFirebase) {
     apply(plugin = "com.google.gms.google-services")
 }
 
-// Firma de publicación: android/key.properties (no se sube al repositorio). Sin él, firma de depuración.
+// Firma de publicación: android/key.properties (no se sube al repositorio). Sin él, firma de depuración, salvo en
+// la versión de producción: un APK de prod firmado con la clave de depuración no se puede actualizar después (SEG-20).
 val propiedadesFirma = Properties().apply {
     val archivo = rootProject.file("key.properties")
     if (archivo.exists()) archivo.inputStream().use { load(it) }
+}
+val compilaProdRelease = gradle.startParameter.taskNames.any { it.contains("ProdRelease", ignoreCase = true) }
+if (compilaProdRelease && !propiedadesFirma.containsKey("storeFile")) {
+    throw GradleException(
+        "La versión de producción necesita android/key.properties con la clave de publicación (ver deploy/README.md)."
+    )
+}
+if (compilaProdRelease && !file("src/prod/google-services.json").exists()) {
+    throw GradleException("Falta android/app/src/prod/google-services.json del proyecto de Firebase de producción.")
 }
 
 android {

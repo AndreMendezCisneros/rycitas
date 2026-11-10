@@ -59,9 +59,34 @@ jobs:
       - run: dart run build_runner build --delete-conflicting-outputs
       - run: flutter analyze
       - run: flutter test
-      - run: flutter build apk --flavor prod --release --dart-define-from-file=config/prod.json
-      - uses: actions/upload-artifact@v4
+      - name: La configuración de producción apunta al dominio real
+        run: |
+          if grep -q "TU-DOMINIO" config/prod.json; then echo "config/prod.json todavía dice TU-DOMINIO"; exit 1; fi
+      # El APK de producción solo se compila con los secretos del repositorio (Settings → Secrets → Actions):
+      #   ANDROID_KEYSTORE_BASE64, ANDROID_KEY_PROPERTIES (contenido de key.properties con storeFile=publicacion.jks)
+      #   y GOOGLE_SERVICES_PROD (contenido de google-services.json del proyecto de Firebase de producción).
+      - name: Secretos de firma y Firebase
+        id: secretos
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEY_PROPERTIES: ${{ secrets.ANDROID_KEY_PROPERTIES }}
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_PROD }}
+        run: |
+          if [ -z "$KEYSTORE" ] || [ -z "$KEY_PROPERTIES" ] || [ -z "$GOOGLE_SERVICES" ]; then
+            echo "Sin secretos de publicación: se omite el APK de producción."
+            echo "listos=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "$KEYSTORE" | base64 -d > android/publicacion.jks
+          printf '%s\n' "$KEY_PROPERTIES" > android/key.properties
+          mkdir -p android/app/src/prod
+          printf '%s\n' "$GOOGLE_SERVICES" > android/app/src/prod/google-services.json
+          echo "listos=1" >> "$GITHUB_OUTPUT"
+      - if: steps.secretos.outputs.listos == '1'
+        run: flutter build apk --flavor prod --release --dart-define-from-file=config/prod.json
+      - if: steps.secretos.outputs.listos == '1'
+        uses: actions/upload-artifact@v4
         with:
-          name: denticita-apk
+          name: rycitas-apk
           path: app_doctor/build/app/outputs/flutter-apk/app-prod-release.apk
           retention-days: 14

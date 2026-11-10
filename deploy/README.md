@@ -70,6 +70,17 @@ Por defecto no hace falta: el doctor confirma y recuerda desde su propio WhatsAp
 Webhook: `https://dominio/webhooks/whatsapp`, con el `WHATSAPP_VERIFY_TOKEN` de `.env`, suscrito al campo `messages`.
 `WHATSAPP_APP_SECRET` es el secreto de la app de Meta. Sin él, el webhook rechaza todo.
 
+## 5. App Android de producción
+
+- `app_doctor/config/prod.json` ya apunta a `https://rycitas.ryjec.com`.
+- Clave de publicación: crearla una vez (`keytool -genkey -v -keystore publicacion.jks -keyalg RSA -keysize 2048
+  -validity 10000 -alias rycitas`) y **guardarla fuera del repositorio** con sus claves: sin ella no se puede publicar
+  una actualización en Google Play. Localmente, `app_doctor/android/key.properties` con `storeFile=publicacion.jks`,
+  `storePassword`, `keyAlias` y `keyPassword`.
+- La compilación `--flavor prod --release` se niega a correr sin esa clave o sin `src/prod/google-services.json`.
+- En GitHub (Settings → Secrets → Actions): `ANDROID_KEYSTORE_BASE64` (`base64 -w0 publicacion.jks`),
+  `ANDROID_KEY_PROPERTIES` y `GOOGLE_SERVICES_PROD`. Sin ellos, el CI prueba todo pero no compila el APK de producción.
+
 ## 5. Firebase
 
 - Crear dos proyectos (dev y prod) y colocar `google-services.json` en `app_doctor/android/app/src/{dev,prod}/`.
