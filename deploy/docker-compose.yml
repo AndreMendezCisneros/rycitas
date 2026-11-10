@@ -15,6 +15,7 @@ services:
       - "443:443"
     environment:
       PLATAFORMA_DOMINIO: ${PLATAFORMA_DOMINIO}
+      APP_SUBDOMINIO: ${APP_SUBDOMINIO:-app}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./certs:/certs:ro

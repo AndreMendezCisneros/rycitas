@@ -4,7 +4,11 @@ Requisitos: Ubuntu 24.04 con Docker y `rclone`, un dominio en Cloudflare y el n�
 
 ## 1. Cloudflare
 
-- DNS, con proxy activado: `A @`, `A *` apuntando al VPS.
+- Dominio actual: `PLATAFORMA_DOMINIO=ryjec.com` y `APP_SUBDOMINIO=rycitas`.
+  - `rycitas.ryjec.com` es la plataforma: la app web, la API (`API_URL` de la app), `/panel/`, `/admin/` y `/privacidad/`.
+  - Cada negocio vive en `<slug>.ryjec.com`, con el subdominio igual a su slug en el panel. Hoy son `glowclinic` y `sonrisawari`.
+- DNS, con proxy activado: un registro `A` por subdominio (`rycitas`, `glowclinic`, `sonrisawari`, …) apuntando al VPS, o
+  un `A *` si `ryjec.com` no se usa para nada más. Cada negocio nuevo necesita su registro.
 - SSL/TLS: modo **Full (strict)** y **Always Use HTTPS**.
 - Origin Server: crear un certificado para `dominio` y `*.dominio`; guardarlo en `deploy/certs/origen.pem` y `origen.key`.
 - **Cache Rule** obligatoria: Cloudflare no cachea HTML por defecto. Regla «Eligible for cache» + «Use cache-control header»

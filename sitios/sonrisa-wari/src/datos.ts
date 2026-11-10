@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 
-/** Subdominio del negocio en RyCitas: de aquí salen tratamientos, precios, horario y contacto. */
-export const SLUG = "sonrisa-wari";
+/**
+ * Subdominio del negocio en RyCitas: de aquí salen tratamientos, precios, horario y contacto. Se toma del host
+ * (sonrisawari.ryjec.com en producción, sonrisa-wari.localhost en desarrollo); en `npm run dev` (localhost) se usa
+ * el de respaldo.
+ */
+const SLUG_RESPALDO = "sonrisa-wari";
+export const SLUG = (() => {
+  const partes = window.location.hostname.split(".");
+  return partes.length >= 2 && /^[a-z0-9-]+$/.test(partes[0]) ? partes[0] : SLUG_RESPALDO;
+})();
 
 export type Tratamiento = {
   slug: string;

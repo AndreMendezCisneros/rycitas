@@ -7,17 +7,17 @@
 	header Strict-Transport-Security "max-age=31536000"
 }
 
-# App del doctor compilada para web (respaldo para quien no tenga Android) y su API, en el mismo host.
-app.{$PLATAFORMA_DOMINIO} {
+# Host de la plataforma (APP_SUBDOMINIO, en producción rycitas.ryjec.com): la app compilada para web (respaldo
+# para quien no tenga Android), su API, el panel, el admin y la política de privacidad que enlaza la app.
+{$APP_SUBDOMINIO}.{$PLATAFORMA_DOMINIO} {
 	import comun
-	handle /api/* {
-		reverse_proxy web:8000
-	}
-	# App del cliente («Quiero reservar»), la misma app en el otro modo.
-	handle /cliente/* {
+	@django path /api/* /cliente/* /panel /panel/* /admin /admin/* /static/* /privacidad /privacidad/* /salud/ /webhooks/*
+	handle @django {
 		reverse_proxy web:8000
 	}
 	handle {
+		header Content-Security-Policy "frame-ancestors 'none'"
+		header X-Content-Type-Options nosniff
 		root * /app_web
 		try_files {path} /index.html
 		file_server
@@ -28,6 +28,7 @@ app.{$PLATAFORMA_DOMINIO} {
 {$PLATAFORMA_DOMINIO}, *.{$PLATAFORMA_DOMINIO} {
 	import comun
 	handle_path /media/* {
+		header X-Content-Type-Options nosniff
 		root * /media
 		file_server
 	}

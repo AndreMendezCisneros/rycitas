@@ -15,7 +15,9 @@ JWT_SECRET = os.environ.get("JWT_SECRET", SECRET_KEY)
 
 # Dominio de la plataforma: cada consultorio vive en <slug>.<dominio>.
 PLATAFORMA_DOMINIO = os.environ.get("PLATAFORMA_DOMINIO", "localhost")
-SUBDOMINIOS_RESERVADOS = {"www", "app", "api", "admin", "citas", "static", "media"}
+# Subdominio de la plataforma: app web, API, panel y política de privacidad (producción: rycitas.ryjec.com).
+APP_SUBDOMINIO = os.environ.get("APP_SUBDOMINIO", "app")
+SUBDOMINIOS_RESERVADOS = {"www", "app", "api", "admin", "citas", "static", "media", "rycitas", APP_SUBDOMINIO}
 ALLOWED_HOSTS = [PLATAFORMA_DOMINIO, f".{PLATAFORMA_DOMINIO}"]
 if DEBUG:
     # HOSTS_DESARROLLO: la IP de la PC en la red local, para probar la app en un teléfono real (scripts/dev.ps1).
