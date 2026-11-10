@@ -11,7 +11,9 @@ def _bool(nombre: str, defecto: bool = False) -> bool:
 
 DEBUG = _bool("DJANGO_DEBUG")
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "solo-para-desarrollo-no-usar-en-produccion" if DEBUG else "")
-JWT_SECRET = os.environ.get("JWT_SECRET", SECRET_KEY)
+# Clave propia para los tokens de la app: si se filtrara SECRET_KEY no alcanza para falsificar sesiones (SEG-11).
+# Sin valor por defecto en producción: denticita.checks impide desplegar sin ella o si es igual a SECRET_KEY.
+JWT_SECRET = os.environ.get("JWT_SECRET", SECRET_KEY if DEBUG else "")
 
 # Dominio de la plataforma: cada consultorio vive en <slug>.<dominio>.
 PLATAFORMA_DOMINIO = os.environ.get("PLATAFORMA_DOMINIO", "localhost")

@@ -134,10 +134,37 @@ def test_panel_tiene_registrados_los_modelos_de_alta():
     assert Consultorio in site._registry and Usuario in site._registry and Paciente in site._registry
 
 
+PRODUCCION = {
+    "SECRET_KEY": "s" * 50, "JWT_SECRET": "j" * 50, "TURNSTILE_SECRET": "x", "TURNSTILE_SITE_KEY": "x",
+    "FIREBASE_PROJECT_ID": "rycitas", "FIREBASE_CREDENCIALES": "/secretos/firebase.json",
+    "PLATAFORMA_DOMINIO": "ryjec.com", "VERIFICAR_CLIENTES": True, "EMAIL_HOST": "smtp.ejemplo.pe",
+}
+
+
+def test_chequeo_de_despliegue_pasa_con_la_configuracion_completa():
+    with override_settings(**PRODUCCION):
+        assert secretos_de_produccion(None) == []
+
+
 def test_chequeo_de_despliegue_exige_los_secretos():
-    with override_settings(TURNSTILE_SECRET="", TURNSTILE_SITE_KEY="x", WHATSAPP_APP_SECRET="x", WHATSAPP_VERIFY_TOKEN="x"):
+    with override_settings(**{**PRODUCCION, "TURNSTILE_SECRET": ""}):
         errores = secretos_de_produccion(None)
     assert [e.msg for e in errores] == ["Falta configurar TURNSTILE_SECRET en el entorno"]
+
+
+@pytest.mark.parametrize(
+    "cambio, codigo",
+    [
+        ({"JWT_SECRET": "s" * 50}, "denticita.E002"),  # igual a SECRET_KEY
+        ({"JWT_SECRET": "corta"}, "denticita.E003"),
+        ({"PLATAFORMA_DOMINIO": "localhost"}, "denticita.E004"),
+        ({"EMAIL_HOST": "localhost"}, "denticita.E005"),
+        ({"FIREBASE_PROJECT_ID": ""}, "denticita.E001"),
+    ],
+)
+def test_check_deploy_exige_jwt_secret_propio_y_dominio_real(cambio, codigo):
+    with override_settings(**{**PRODUCCION, **cambio}):
+        assert [e.id for e in secretos_de_produccion(None)] == [codigo]
 
 
 # --- Tareas -----------------------------------------------------------------------------------
