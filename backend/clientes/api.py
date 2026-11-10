@@ -153,6 +153,31 @@ def editar_yo(request, datos: PerfilEntrada):
     return _yo(request.auth)
 
 
+@router.delete("/yo", response={204: None})
+def eliminar_cuenta(request):
+    """Borra la cuenta de la app (derecho de cancelación; Google Play lo exige dentro de la app).
+
+    Se borran sesiones, dispositivos y códigos, y la ficha queda anónima (no se borra la fila para no romper los
+    referidos de otros). Las citas, sellos y cupones son del negocio donde se atendió: su borrado se pide al negocio,
+    que lo ejecuta desde su app (pacientes → eliminar datos).
+    """
+    with transaction.atomic():
+        cliente = Cliente.objects.select_for_update().get(pk=request.auth.pk)
+        cliente.sesiones.all().delete()
+        cliente.dispositivos.all().delete()
+        cliente.codigos.all().delete()
+        cliente.silenciados.clear()
+        cliente.nombre = "Cliente eliminado"
+        cliente.correo = f"eliminado-{cliente.pk}@eliminado.invalid"
+        cliente.celular = f"eliminado-{cliente.pk}"
+        cliente.celular_verificado_en = cliente.correo_verificado_en = None
+        cliente.consentimiento_en = cliente.acepta_publicidad_en = None
+        cliente.politica_version = ""
+        cliente.activo = False
+        cliente.save()
+    return 204, None
+
+
 @router.post("/dispositivos", response={204: None})
 def dispositivo(request, datos: DispositivoEntrada):
     DispositivoCliente.objects.update_or_create(

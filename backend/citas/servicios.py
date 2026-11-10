@@ -1099,14 +1099,29 @@ def expirar_vencidas(consultorio: Consultorio | None = None) -> int:
 
 
 def anonimizar_paciente(paciente: Paciente) -> None:
-    """Borrado a pedido (RNF-09). Conserva las citas para las estadísticas, sin datos personales."""
-    from mensajeria.models import MensajeEntrante
+    """Borrado a pedido (RNF-09, derecho de cancelación). Conserva las citas para las estadísticas, sin datos personales.
 
+    Alcanza todo lo que el negocio guarda con su número: sellos, canjes, cupones usados y los avisos push de sus
+    citas (llevan su nombre en el texto). Su cuenta de la app de clientes, si tiene, la borra él mismo desde la app.
+    """
+    from clientes.models import Canje, CuponUsado, Sello
+    from mensajeria.models import AvisoPendiente, MensajeEntrante
+
+    anonimo = f"eliminado-{paciente.pk}"
     with transaction.atomic():
         MensajeEntrante.objects.filter(celular=paciente.celular.lstrip("+")).delete()
+        citas = list(paciente.citas.values_list("pk", flat=True))
+        AvisoPendiente.objects.filter(
+            consultorio_id=paciente.consultorio_id, datos__cita_id__in=[str(pk) for pk in citas]
+        ).delete()
+        Sello.objects.filter(consultorio_id=paciente.consultorio_id, celular=paciente.celular).update(celular=anonimo)
+        Canje.objects.filter(consultorio_id=paciente.consultorio_id, celular=paciente.celular).update(celular=anonimo)
+        CuponUsado.objects.filter(cita_id__in=citas).update(celular=anonimo)
         paciente.citas.update(nombre_ingresado="")
         paciente.nombre = "Paciente eliminado"
-        paciente.celular = f"eliminado-{paciente.pk}"
+        paciente.celular = anonimo
         paciente.verificado_en = None
         paciente.consentimiento_en = None
+        paciente.acepta_publicidad_en = None
+        paciente.politica_version = ""
         paciente.save()

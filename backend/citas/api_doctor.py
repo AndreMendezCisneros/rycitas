@@ -11,6 +11,7 @@ from agenda.motor import LIMA, Intervalo, huecos_del_dia
 from citas import presentacion, servicios
 from citas.models import Cita, Estado, Paciente
 from consultorios.models import Profesional, turnos_con_rango, validar_turnos
+from consultorios.permisos import solo_general
 from denticita.errores import ErrorNegocio
 from denticita.idempotencia import idempotente
 
@@ -453,6 +454,21 @@ def bloquear(request, paciente_id: int, datos: BloquearEntrada):
     p.bloqueado = datos.bloqueado
     p.save(update_fields=["bloqueado"])
     return _paciente(p)
+
+
+@router.post("/pacientes/{paciente_id}/eliminar-datos", response={204: None})
+def eliminar_datos_paciente(request, paciente_id: int):
+    """Derecho de cancelación (DAT-04): el negocio atiende el pedido del paciente. Solo la cuenta general.
+
+    Las citas quedan para las estadísticas, sin nombre ni número. No se hace con citas por venir: primero se cancelan
+    (si no, el negocio se queda sin forma de avisarle).
+    """
+    solo_general(request, "Solo la cuenta general del negocio puede eliminar los datos de un paciente.")
+    p = get_object_or_404(Paciente, consultorio=request.auth.consultorio, pk=paciente_id)
+    if p.citas.filter(estado__in=[Estado.POR_APROBAR, Estado.PROGRAMADA, Estado.EN_CURSO], fin__gte=timezone.now()).exists():
+        raise ErrorNegocio("citas_por_venir", "Tiene citas por venir: cancélalas antes de eliminar sus datos.", 409)
+    servicios.anonimizar_paciente(p)
+    return 204, None
 
 
 # --- Negocio -----------------------------------------------------------------------------------------

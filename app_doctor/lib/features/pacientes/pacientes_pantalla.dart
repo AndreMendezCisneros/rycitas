@@ -144,9 +144,32 @@ class PacienteDetallePantalla extends ConsumerWidget {
     }
   }
 
+  /// Derecho de cancelación: el paciente lo pide y el negocio lo ejecuta. Las citas quedan sin nombre ni número.
+  Future<void> _eliminarDatos(BuildContext context, WidgetRef ref) async {
+    final ok = await confirmar(
+      context,
+      '¿Eliminar sus datos?',
+      'Se borran su nombre y su número, y sus sellos dejan de ser suyos. Las citas quedan solo para tus '
+          'estadísticas. No se puede deshacer.',
+      accion: 'Eliminar',
+    );
+    if (!ok) return;
+    try {
+      await ref.read(apiProvider).post('/pacientes/$id/eliminar-datos');
+      ref.invalidate(pacienteProvider(id));
+      if (context.mounted) {
+        avisar(context, 'Datos eliminados.');
+        context.pop();
+      }
+    } on ApiError catch (e) {
+      if (context.mounted) avisar(context, e.mensaje);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final paciente = ref.watch(pacienteProvider(id));
+    final esGeneral = ref.watch(negocioActualProvider).esGeneral;
     return Scaffold(
       appBar: AppBar(title: Text(Vocabulario.may(vocDe(context).cliente))),
       body: paciente.when(
@@ -181,6 +204,16 @@ class PacienteDetallePantalla extends ConsumerWidget {
                 subtitle: Text(Fechas.diaHora(c.inicio)),
                 trailing: Text(c.estadoTexto),
               ),
+            if (esGeneral) ...[
+              const SizedBox(height: 24),
+              TextButton.icon(
+                key: const Key('eliminar-datos-paciente'),
+                onPressed: () => _eliminarDatos(context, ref),
+                icon: const Icon(Icons.delete_forever_outlined),
+                label: const Text('Eliminar sus datos (a pedido suyo)'),
+                style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+              ),
+            ],
           ],
         ),
       ),

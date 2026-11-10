@@ -384,3 +384,67 @@ def test_el_cliente_da_y_retira_el_permiso_de_promociones(cliente):
 def test_sin_permiso_no_entra_en_ninguna_campana(con_sellos, limpieza, api, reloj):
     _cita_terminada(api, limpieza, reloj, hora=9)
     assert api.get("/campanas/previa", segmento="todos").json() == {"destinatarios": 0, "con_app": 0}
+
+
+# --- DAT-03 / DAT-04: borrar la cuenta y los datos ------------------------------------------------------
+
+
+def test_borrar_cuenta_cliente_anonimiza_y_corta_la_sesion(cliente, consultorio):
+    rosa = _cuenta()
+    DispositivoCliente.objects.create(cliente=rosa, token_fcm="tok-rosa")
+    rosa.silenciados.add(consultorio)
+    app = ApiCliente(rosa)
+    assert app.c.delete("/cliente/v1/yo").status_code == 204
+    rosa.refresh_from_db()
+    assert rosa.activo is False and "rosa" not in rosa.correo and rosa.celular.startswith("eliminado-")
+    assert rosa.nombre == "Cliente eliminado" and rosa.celular_verificado_en is None
+    assert not DispositivoCliente.objects.exists() and not rosa.silenciados.exists()
+    assert app.get("/yo").status_code == 401
+    # Con el mismo correo puede crear una cuenta nueva desde cero.
+    assert _registro(cliente).status_code == 200
+
+
+def test_anonimizar_borra_sellos_cupones_y_avisos(con_sellos, limpieza, api, reloj):
+    from citas import servicios
+    from citas.models import Paciente
+    from clientes.models import Canje, Cupon, CuponUsado
+    from mensajeria.models import AvisoPendiente
+
+    cita_id = _cita_terminada(api, limpieza, reloj, hora=9)
+    paciente = Paciente.objects.get()
+    cupon = Cupon.objects.create(consultorio=con_sellos, codigo="X", titulo="X", descuento_pct=5,
+                                 vence_el=AHORA.date() + timedelta(days=9))
+    CuponUsado.objects.create(cupon=cupon, cita_id=cita_id, celular=paciente.celular)
+    Canje.objects.create(consultorio=con_sellos, celular=paciente.celular, premio="Limpieza")
+    AvisoPendiente.objects.create(consultorio=con_sellos, clave=f"x:{cita_id}", titulo="Rosa Paz", cuerpo="Limpieza",
+                                  datos={"cita_id": str(cita_id)}, proximo_intento=AHORA)
+    celular = paciente.celular
+    servicios.anonimizar_paciente(paciente)
+    assert not Sello.objects.filter(celular=celular).exists() and Sello.objects.exists()
+    assert not Canje.objects.filter(celular=celular).exists()
+    assert not CuponUsado.objects.filter(celular=celular).exists()
+    assert not AvisoPendiente.objects.exists()
+    paciente.refresh_from_db()
+    assert paciente.nombre == "Paciente eliminado" and paciente.acepta_publicidad_en is None
+
+
+def test_el_negocio_elimina_los_datos_de_un_paciente_a_su_pedido(limpieza, api, reloj, consultorio):
+    from citas.models import Paciente
+
+    _cita_terminada(api, limpieza, reloj, hora=9)
+    paciente = Paciente.objects.get()
+    assert api.post(f"/pacientes/{paciente.pk}/eliminar-datos").status_code == 204
+    paciente.refresh_from_db()
+    assert paciente.nombre == "Paciente eliminado"
+
+
+def test_no_elimina_datos_con_citas_por_venir_ni_desde_una_cuenta_de_profesional(cliente, consultorio, limpieza, api):
+    from citas.models import Paciente
+
+    assert reservar(cliente).status_code == 201
+    paciente = Paciente.objects.get()
+    Cita.objects.update(estado=Estado.PROGRAMADA)
+    assert api.post(f"/pacientes/{paciente.pk}/eliminar-datos").status_code == 409
+    usuario = Usuario.objects.create_user("p@sonrisa.test", "clave-segura-123", consultorio=consultorio,
+                                          profesional=consultorio.profesional_principal())
+    assert ApiDoctor(usuario).post(f"/pacientes/{paciente.pk}/eliminar-datos").status_code == 403

@@ -197,6 +197,34 @@ class PerfilClientePantalla extends ConsumerWidget {
     await ref.read(modoProvider.notifier).elegir(a);
   }
 
+  Future<void> _cambiarPromociones(BuildContext context, WidgetRef ref, String nombre, bool acepta) async {
+    try {
+      await ref.read(apiClienteProvider).put('/yo', {'nombre': nombre, 'acepta_publicidad': acepta});
+      ref.invalidate(yoProvider);
+    } on ApiError catch (e) {
+      if (context.mounted) avisar(context, e.mensaje);
+    }
+  }
+
+  /// Derecho de cancelación (y requisito de Google Play): la cuenta se borra desde la propia app.
+  Future<void> _eliminarCuenta(BuildContext context, WidgetRef ref) async {
+    final ok = await confirmar(
+      context,
+      '¿Eliminar tu cuenta?',
+      'Se borran tu cuenta, tu correo y tus avisos. Para borrar tus citas de un lugar, pídeselo a ese lugar. '
+          'No se puede deshacer.',
+      accion: 'Eliminar',
+    );
+    if (!ok) return;
+    try {
+      await ref.read(apiClienteProvider).delete('/yo');
+    } on ApiError catch (e) {
+      if (context.mounted) avisar(context, e.mensaje);
+      return;
+    }
+    await _salir(ref, a: ModoApp.ninguno);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final yo = ref.watch(yoProvider);
@@ -233,6 +261,27 @@ class PerfilClientePantalla extends ConsumerWidget {
                     leading: const Icon(Icons.logout_rounded),
                     title: const Text('Cerrar sesión'),
                     onTap: () => _salir(ref, a: ModoApp.ninguno),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    key: const Key('cliente-promociones'),
+                    title: const Text('Recibir promociones'),
+                    subtitle: const Text('De los lugares donde reservas. Opcional.'),
+                    value: d['acepta_publicidad'] == true,
+                    onChanged: (v) => _cambiarPromociones(context, ref, d['nombre'] as String, v),
+                  ),
+                  ListTile(
+                    key: const Key('cliente-eliminar-cuenta'),
+                    leading: Icon(Icons.delete_forever_outlined, color: Theme.of(context).colorScheme.error),
+                    title: const Text('Eliminar mi cuenta'),
+                    subtitle: const Text('Borra tu cuenta de la app. Tus citas las guarda cada lugar.'),
+                    onTap: () => _eliminarCuenta(context, ref),
                   ),
                 ],
               ),
