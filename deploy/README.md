@@ -88,6 +88,11 @@ Webhook: `https://dominio/webhooks/whatsapp`, con el `WHATSAPP_VERIFY_TOKEN` de 
 
 ## 6. Respaldos y monitoreo
 
+- Monitores externos (UptimeRobot u otro): `https://rycitas.ryjec.com/salud/` (la web y la base) y
+  `https://rycitas.ryjec.com/salud/?cola=1`, que además falla si la cola de tareas lleva más de 5 min sin correr
+  (pre-reservas sin expirar, recordatorios sin salir). En el servidor, `docker compose ps` muestra `tareas` como
+  `unhealthy` en ese caso.
+
 ```bash
 rclone config                # crear el remoto «r2» (Cloudflare R2, API S3)
 crontab -e                   # 0 4 * * * /opt/denticita/deploy/respaldar.sh >> /var/log/denticita-respaldo.log 2>&1

@@ -64,6 +64,12 @@ services:
     command: python manage.py qcluster
     # Una tarea puede durar hasta el timeout de django-q (120 s): se le da tiempo de terminar antes del corte.
     stop_grace_period: 130s
+    healthcheck:  # PRD-04: «unhealthy» en docker compose ps si el qcluster deja de procesar
+      test: ["CMD", "python", "manage.py", "salud_cola"]
+      interval: 2m
+      timeout: 30s
+      start_period: 3m
+      retries: 2
     volumes:
       - ./secretos:/secretos:ro
     deploy:

@@ -112,7 +112,27 @@ def test_presupuesto_de_peso_del_sitio(consultorio, limpieza):
 
 
 def test_salud(db):
-    assert Client().get("/salud/").json() == {"estado": "ok"}
+    assert Client().get("/salud/").json() == {"estado": "ok", "cola": "sin_programar"}
+
+
+def test_salud_informa_si_la_cola_de_tareas_se_atrasa(db, reloj):
+    """PRD-04: el qcluster caído no se nota en la web; un monitor con ?cola=1 sí lo ve."""
+    from django.core.management import call_command
+    from django.core.management.base import CommandError
+    from django_q.models import Schedule
+
+    from .conftest import AHORA
+
+    Schedule.objects.create(name="expirar-prerreservas", func="x", schedule_type=Schedule.MINUTES, minutes=1,
+                            next_run=AHORA + timedelta(minutes=1))
+    assert Client().get("/salud/?cola=1").json() == {"estado": "ok", "cola": "ok"}
+    call_command("salud_cola")
+    reloj.avanzar(minutes=10)  # nadie adelantó next_run: el qcluster no está corriendo
+    assert Client().get("/salud/").status_code == 200  # la web sigue sana
+    r = Client().get("/salud/?cola=1")
+    assert r.status_code == 503 and r.json()["cola"] == "atrasada"
+    with pytest.raises(CommandError):
+        call_command("salud_cola")
 
 
 def test_salud_avisa_si_la_base_no_responde(db):

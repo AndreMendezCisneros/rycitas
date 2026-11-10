@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 from django.conf import settings
@@ -17,6 +18,8 @@ from denticita.errores import ErrorNegocio
 from sitio import contenido as contenido_fijo
 from sitio import propios
 from sitio.seguridad import politica_contenido
+
+log = logging.getLogger(__name__)
 
 RUTA_WIDGET = Path(__file__).parent / "static" / "sitio" / "rycitas.js"
 
@@ -224,13 +227,22 @@ def privacidad(request):
 
 @never_cache
 def salud(request):
-    """Para el monitor externo (RNF-05): falla si la base no responde."""
+    """Para el monitor externo (RNF-05): falla si la base no responde.
+
+    Con `?cola=1` también falla si la cola de tareas está atrasada (PRD-04): conviene un segundo monitor con esa URL.
+    El healthcheck del contenedor web no la usa, para que una cola caída no tumbe la web.
+    """
+    from mensajeria.salud import estado_cola
+
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
+        cola = estado_cola()
     except Exception:
+        log.exception("salud: la base no responde")
         return JsonResponse({"estado": "error"}, status=503)
-    return JsonResponse({"estado": "ok"})
+    estado = 503 if request.GET.get("cola") == "1" and cola != "ok" else 200
+    return JsonResponse({"estado": "ok" if estado == 200 else "error", "cola": cola}, status=estado)
 
 
 @csrf_exempt
