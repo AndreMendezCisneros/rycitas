@@ -14,4 +14,8 @@ RUN useradd --create-home --uid 1000 denticita && mkdir -p /media && chown denti
 USER denticita
 
 EXPOSE 8000
-CMD ["gunicorn", "denticita.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--timeout", "30", "--access-logfile", "-"]
+# --graceful-timeout: al detenerse termina lo que está atendiendo (compose le da 35 s). --max-requests recicla cada
+# worker de a poco para que una fuga de memoria no llegue al límite del contenedor.
+CMD ["gunicorn", "denticita.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", \
+     "--timeout", "30", "--graceful-timeout", "25", "--max-requests", "1000", "--max-requests-jitter", "100", \
+     "--access-logfile", "-"]

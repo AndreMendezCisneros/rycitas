@@ -40,6 +40,8 @@ services:
 
   web:
     <<: *backend
+    # Apagado ordenado (PRD-02): gunicorn termina las peticiones en curso (graceful-timeout 25 s) antes del corte.
+    stop_grace_period: 35s
     volumes:
       - media:/media
       - ./secretos:/secretos:ro
@@ -60,6 +62,8 @@ services:
   tareas:
     <<: *backend
     command: python manage.py qcluster
+    # Una tarea puede durar hasta el timeout de django-q (120 s): se le da tiempo de terminar antes del corte.
+    stop_grace_period: 130s
     volumes:
       - ./secretos:/secretos:ro
     deploy:
