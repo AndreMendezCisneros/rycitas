@@ -1,0 +1,16 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Nuevo negocio{% endblock %}
+{% block contenido %}
+<p class="dato">Paso 1 de 2</p>
+<h1>¿Qué tipo de negocio es?</h1>
+<p>El tipo define cómo habla el sitio y la app (cliente o paciente, servicio o tratamiento, barbero o doctor), y precarga sus servicios, duraciones y horario. Todo se puede cambiar después.</p>
+<div class="rejilla">
+  {% for clave, t in rubros.items %}
+  <a class="tarjeta tipo tipo-{{ clave }}" href="?tipo={{ clave }}">
+    <strong>{{ t.nombre }}</strong>
+    <span class="dato">{{ t.vocabulario.servicios|capfirst }}: {% for s in t.servicios|slice:":3" %}{{ s.0 }}{% if not forloop.last %}, {% endif %}{% endfor %}…</span>
+    <span class="dato">Atiende: {{ t.vocabulario.profesional }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

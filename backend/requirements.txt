@@ -1,0 +1,12 @@
+Django>=5.2,<5.3
+django-ninja>=1.4,<2
+django-q2>=1.8,<2
+psycopg[binary]>=3.2,<4
+argon2-cffi>=23.1
+PyJWT>=2.9,<3
+requests>=2.32,<3
+google-auth>=2.35,<3
+Pillow>=11
+whitenoise>=6.7,<7
+gunicorn>=23,<24
+sentry-sdk>=2.18,<3

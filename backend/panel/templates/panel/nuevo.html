@@ -1,0 +1,62 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Nuevo negocio · {{ tipo.nombre }}{% endblock %}
+{% block contenido %}
+<p class="dato">Paso 2 de 2 · <a href="{% url 'panel:nuevo' %}">cambiar tipo</a></p>
+<h1>Nuevo negocio: {{ tipo.nombre }}</h1>
+<p>Ya cargamos los {{ tipo.vocabulario.servicios }} y el horario típicos de este tipo de negocio. Ajusta lo que haga falta: el negocio queda como borrador hasta que lo publiques.</p>
+
+<form method="post" class="formulario">
+  {% csrf_token %}
+  <input type="hidden" name="rubro" value="{{ clave }}">
+
+  <section class="tarjeta">
+    <h2>1. Datos del negocio</h2>
+    <div class="dos">
+      {% include "panel/_campo.html" with campo=datos.nombre %}
+      {% include "panel/_campo.html" with campo=datos.slug %}
+      {% include "panel/_campo.html" with campo=datos.whatsapp %}
+      {% include "panel/_campo.html" with campo=datos.direccion %}
+      {% include "panel/_campo.html" with campo=datos.mapa_url %}
+      {% include "panel/_campo.html" with campo=datos.profesionales %}
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <h2>2. {{ tipo.vocabulario.servicios|capfirst }}</h2>
+    {{ servicios.management_form }}
+    {% if servicios.non_form_errors %}<p class="error">{{ servicios.non_form_errors|join:" " }}</p>{% endif %}
+    <div class="tabla-envoltura">
+    <table>
+      <thead><tr><th>Incluir</th><th>Nombre</th><th>Lo que ve el {{ tipo.vocabulario.cliente }}</th><th>Duración (min)</th><th>Margen (min)</th><th>Precio S/</th><th>Indicaciones</th></tr></thead>
+      <tbody>
+      {% for s in servicios %}
+        <tr>
+          <td>{{ s.incluir }}</td><td>{{ s.nombre }}</td><td>{{ s.motivo }}</td>
+          <td>{{ s.duracion_min }}{% for e in s.duracion_min.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
+          <td>{{ s.margen_min }}</td><td>{{ s.precio }}</td><td>{{ s.indicaciones }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <p class="dato">El margen es el tiempo para limpiar o preparar entre citas. La duración real se aprende sola con el uso de la app.</p>
+  </section>
+
+  <section class="tarjeta">
+    <h2>3. Horario</h2>
+    {% include "panel/_horario.html" with horario=horario %}
+  </section>
+
+  <section class="tarjeta">
+    <h2>4. Agenda, cuenta de la app y opciones</h2>
+    {% for campo in opciones %}{% include "panel/_campo.html" with campo=campo %}{% endfor %}
+    <div class="campo">
+      <label for="cuenta_correo">Correo de la cuenta de la app (opcional)</label>
+      <input id="cuenta_correo" name="cuenta_correo" type="email" value="{{ cuenta_correo }}">
+      <p class="dato">Creamos la cuenta con una contraseña segura que verás una sola vez. Puedes agregar más cuentas después.</p>
+    </div>
+  </section>
+
+  <button class="boton boton-principal" type="submit">Crear negocio (borrador)</button>
+</form>
+{% endblock %}

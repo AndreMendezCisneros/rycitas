@@ -1,0 +1,74 @@
+# Un VPS, cuatro contenedores: Caddy, Django, tareas y PostgreSQL.
+x-backend: &backend
+  build: ../backend
+  env_file: .env
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    environment:
+      PLATAFORMA_DOMINIO: ${PLATAFORMA_DOMINIO}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+      - ./app_web:/app_web:ro
+      - media:/media:ro
+      - caddy_datos:/data
+    depends_on:
+      - web
+
+  web:
+    <<: *backend
+    volumes:
+      - media:/media
+      - ./secretos:/secretos:ro
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os,urllib.request as u; u.urlopen(u.Request('http://localhost:8000/salud/', headers={'Host': os.environ['PLATAFORMA_DOMINIO'], 'X-Forwarded-Proto': 'https'}), timeout=5)"
+      interval: 30s
+      timeout: 6s
+      retries: 3
+
+  tareas:
+    <<: *backend
+    command: python manage.py qcluster
+    volumes:
+      - ./secretos:/secretos:ro
+    deploy:
+      resources:
+        limits:
+          memory: 300m
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_datos:
+  media:
+  caddy_datos:

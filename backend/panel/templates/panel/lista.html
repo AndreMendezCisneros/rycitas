@@ -1,0 +1,38 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Negocios{% endblock %}
+{% block contenido %}
+<div class="cabecera">
+  <h1>Negocios</h1>
+  <a class="boton boton-principal" href="{% url 'panel:nuevo' %}">+ Nuevo negocio</a>
+</div>
+{% if por_vencer %}<p class="mensaje mensaje-warning">{{ por_vencer }} negocio(s) vencen en 7 días o menos.</p>{% endif %}
+<form class="filtros" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nombre o subdominio" aria-label="Buscar">
+  <select name="estado" aria-label="Estado">
+    <option value="">Todos</option>
+    <option value="publicado" {% if filtro == "publicado" %}selected{% endif %}>Publicados</option>
+    <option value="borrador" {% if filtro == "borrador" %}selected{% endif %}>Borradores</option>
+    <option value="suspendido" {% if filtro == "suspendido" %}selected{% endif %}>Suspendidos</option>
+  </select>
+  <button class="boton" type="submit">Filtrar</button>
+</form>
+<div class="tabla-envoltura">
+<table>
+  <thead><tr><th>Negocio</th><th>Tipo</th><th>Estado</th><th>Citas (30 días)</th><th>Cuentas</th><th>Servicio pagado</th></tr></thead>
+  <tbody>
+  {% for f in filas %}
+    <tr>
+      <td><a href="{% url 'panel:ficha' f.c.pk %}"><strong>{{ f.c.nombre }}</strong></a><br><span class="dato">{{ f.c.slug }}</span></td>
+      <td>{{ f.tipo }}</td>
+      <td><span class="etiqueta etiqueta-{{ f.estado }}">{{ f.estado|capfirst }}</span></td>
+      <td>{{ f.c.citas_30 }}</td>
+      <td>{{ f.c.cuentas }}</td>
+      <td>{% if f.vence is None %}—{% elif f.vencido %}<span class="etiqueta etiqueta-suspendido">Venció hace {{ f.vencido }} días</span>{% elif f.por_vencer %}<span class="etiqueta etiqueta-borrador">Vence en {{ f.vence }} días</span>{% else %}{{ f.c.servicio_hasta|date:"d/m/Y" }}{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6">Todavía no hay negocios. <a href="{% url 'panel:nuevo' %}">Crea el primero</a>.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

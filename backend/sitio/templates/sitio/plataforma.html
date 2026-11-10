@@ -1,0 +1,13 @@
+{% extends "sitio/base.html" %}{% load static %}
+{% block titulo %}RyCitas · Reservas en línea para tu negocio{% endblock %}
+{% block descripcion %}RyCitas: tus clientes reservan en tu sitio web en menos de un minuto y tú confirmas desde tu celular.{% endblock %}
+{% block contenido %}
+<main class="pagina">
+  <section class="pagina-tarjeta">
+    <img src="{% static 'sitio/rycitas-logo.svg' %}" alt="" width="64" height="64">
+    <h1>RyCitas</h1>
+    <p>Tus clientes reservan desde tu sitio web en menos de un minuto, sin crear cuenta, y tú confirmas desde tu celular.</p>
+    <p class="dato">Para consultorios, barberías, salones, estética, salud y veterinarias. Estamos en piloto con pocos negocios.</p>
+  </section>
+</main>
+{% endblock %}

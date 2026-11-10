@@ -1,0 +1,37 @@
+# Certificado de origen de Cloudflare (gratuito, 15 años, cubre *.dominio) en ./certs.
+# Se usa en lugar de certificados automáticos: un comodín de Let's Encrypt exige el reto DNS, y la
+# imagen oficial de Caddy no trae el módulo de Cloudflare. Ver docs/ANALISIS.md, hallazgo 9.
+(comun) {
+	tls /certs/origen.pem /certs/origen.key
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000"
+}
+
+# App del doctor compilada para web (respaldo para quien no tenga Android) y su API, en el mismo host.
+app.{$PLATAFORMA_DOMINIO} {
+	import comun
+	handle /api/* {
+		reverse_proxy web:8000
+	}
+	# App del cliente («Quiero reservar»), la misma app en el otro modo.
+	handle /cliente/* {
+		reverse_proxy web:8000
+	}
+	handle {
+		root * /app_web
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# Sitios de consultorios, panel y webhook.
+{$PLATAFORMA_DOMINIO}, *.{$PLATAFORMA_DOMINIO} {
+	import comun
+	handle_path /media/* {
+		root * /media
+		file_server
+	}
+	handle {
+		reverse_proxy web:8000
+	}
+}

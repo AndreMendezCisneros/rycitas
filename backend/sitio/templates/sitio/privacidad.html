@@ -1,0 +1,22 @@
+{% extends "sitio/base.html" %}
+{% block titulo %}Política de datos{% endblock %}
+{% block contenido %}
+<main class="pagina">
+  <section class="pagina-tarjeta">
+    <h1>Política de datos personales</h1>
+    <p>Texto base según la Ley N.º 29733. Debe revisarlo un abogado antes de usarlo con {{ voc.clientes }} reales.</p>
+    <h2>Qué datos pedimos</h2>
+    <p>Solo tu nombre, tu número de celular y el {{ voc.servicio }} que eliges. No necesitas crear una cuenta: este navegador recuerda tu nombre y tu número durante un rato para tu siguiente reserva, y luego los borra.</p>
+    {% if salud %}<p><strong>No escribas datos de salud</strong> (diagnósticos, medicinas, síntomas) en el formulario. Si hace falta, se los cuentas en persona a quien te atiende.</p>{% endif %}
+    <h2>Para qué los usamos</h2>
+    <p>Para registrar tu cita{% if consultorio %} en {{ consultorio.nombre }}{% endif %}, y para que {{ voc.el_local }} te escriba por WhatsApp para confirmarla o recordártela. No los vendemos ni los usamos para publicidad.</p>
+    <h2>Quién los trata</h2>
+    <p>{{ voc.el_local|capfirst }} donde reservas y la plataforma de reservas que usa. Los mensajes sobre tu cita los envía {{ voc.el_local }} desde su propio WhatsApp (Meta), según las condiciones de WhatsApp.</p>
+    <h2>Cuánto tiempo se guardan</h2>
+    <p>Mientras seas {{ voc.cliente }} {{ voc.del_local }}. Los registros técnicos se borran a los 90 días.</p>
+    <h2>Tus derechos</h2>
+    <p>Puedes pedir ver, corregir o borrar tus datos por WhatsApp: {{ voc.el_local }} atiende el borrado en menos de 7 días.</p>
+    <p><a href="/">Volver</a></p>
+  </section>
+</main>
+{% endblock %}

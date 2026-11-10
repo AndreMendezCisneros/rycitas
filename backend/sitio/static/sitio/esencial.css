@@ -1,0 +1,80 @@
+:root {
+  --canopy: #0a3922;
+  --coral: #ff643b;
+  --sobre-coral: #06140c;
+  --leaf: #1dbf73;
+  --indigo: #460095;
+  --lavender: #eee2ff;
+  --mint: #d2f2e3;
+  --sage: #e4f7ee;
+  --sky: #ccf0f8;
+  --cream: #faf7e8;
+  --lilac: #fdf0ff;
+  --peach: #ffede8;
+  --paper: #ffffff;
+  --graphite: #3d3d3d;
+  --frost: #e0e0e0;
+  --error: #a32a1c;
+  --ancho: 76rem;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 5rem; }
+body {
+  margin: 0; background: var(--lavender); color: var(--canopy);
+  font: 400 1rem/1.4 "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "ss03";
+}
+h1, h2, h3 { font-weight: 600; margin: 0 0 .75rem; line-height: 1.1; }
+p { margin: 0 0 .75rem; }
+a { color: var(--indigo); }
+img { max-width: 100%; }
+:focus-visible { outline: 3px solid var(--indigo); outline-offset: 2px; }
+.portada :focus-visible, .pie :focus-visible, .aviso-horario :focus-visible { outline-color: var(--leaf); }
+
+.barra {
+  position: sticky; top: 0; z-index: 20; background: var(--paper);
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: .625rem max(1rem, calc((100% - var(--ancho)) / 2));
+}
+.marca { display: flex; align-items: center; gap: .625rem; font-weight: 600; font-size: 1.125rem; color: var(--canopy); text-decoration: none; min-width: 0; }
+.marca img { height: 40px; width: auto; }
+.enlaces { display: none; gap: 1.5rem; }
+.enlaces a { color: var(--canopy); text-decoration: none; font-weight: 500; }
+.enlaces a:hover { color: var(--indigo); }
+@media (min-width: 60rem) { .enlaces { display: flex; } }
+
+.boton {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 48px; padding: .625rem 1.5rem; border: 2px solid var(--canopy); border-radius: 40px;
+  background: transparent; color: var(--canopy); cursor: pointer; flex: none;
+  font-family: inherit; font-size: 1rem; font-weight: 600; line-height: 1.2; text-align: center; text-decoration: none;
+}
+.boton:hover { background: var(--sage); }
+.boton-principal { background: var(--coral); border-color: var(--coral); color: var(--sobre-coral); }
+.boton-principal:hover { background: #ff7d5a; border-color: #ff7d5a; }
+.boton-principal[aria-disabled="true"], .boton-principal:disabled { background: var(--frost); border-color: var(--frost); color: var(--graphite); cursor: default; }
+.boton-claro { border-color: var(--paper); color: var(--paper); }
+.boton-claro:hover { background: #164e33; }
+
+.portada { background: var(--canopy); color: var(--paper); padding: 2.5rem max(1rem, calc((100% - var(--ancho)) / 2)) 3.5rem; }
+.portada-rejilla { display: grid; gap: 2.5rem; }
+.portada h1 { font-size: clamp(2.625rem, 7.2vw, 5rem); letter-spacing: -.028em; line-height: 1.04; margin-bottom: 1.25rem; }
+.portada h1 em { font-style: normal; color: var(--leaf); }
+.portada .introduccion { font-size: 1.125rem; line-height: 1.4; max-width: 34rem; margin-bottom: 1.5rem; }
+.estado { display: inline-flex; align-items: center; gap: .5rem; min-height: 1.5rem; font-size: .875rem; font-weight: 600; margin-bottom: 1rem; font-variant-numeric: tabular-nums; }
+.estado::before { content: ""; width: .625rem; height: .625rem; border-radius: 50%; background: var(--frost); }
+.estado.abierto::before { background: var(--leaf); }
+.acciones { display: flex; flex-wrap: wrap; gap: .75rem; }
+@media (min-width: 60rem) {
+  .portada { padding-top: 4rem; padding-bottom: 5rem; }
+  .portada-rejilla { grid-template-columns: 1.35fr 1fr; align-items: center; gap: 4rem; }
+}
+/* Colores por tipo de negocio: el dental conserva los de siempre. */
+.rubro-barberia { --canopy: #2b1d14; --coral: #d9a441; --leaf: #b07a2a; --mint: #f3e6cf; --sage: #f8f0e2; }
+.rubro-peluqueria { --canopy: #4a1238; --coral: #ff7aa8; --leaf: #c2407a; --mint: #fbdcea; --sage: #fdeef5; }
+.rubro-estetica { --canopy: #1f3d33; --coral: #d6b37a; --leaf: #5b8c6f; --mint: #dcebe2; --sage: #eef6f1; }
+.rubro-salud { --canopy: #0f3a44; --coral: #4cc3c9; --leaf: #2a8b93; --mint: #d3eff1; --sage: #e8f7f8; }
+.rubro-veterinaria { --canopy: #3a2208; --coral: #ff9f43; --leaf: #c0702a; --mint: #fde3cb; --sage: #fef1e4; }
+.rubro-otro { --canopy: #1d2b4a; --coral: #ffb547; --leaf: #3d5a80; --mint: #dde6f3; --sage: #eef2f9; }

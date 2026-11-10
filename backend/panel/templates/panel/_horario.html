@@ -1,0 +1,16 @@
+<div class="tabla-envoltura">
+<table class="horario">
+  <thead><tr><th>Día</th><th>Mañana (o todo el día)</th><th>Tarde (opcional)</th></tr></thead>
+  <tbody>
+  {% for nombre, tramos in horario.dias %}
+    <tr>
+      <th scope="row">{{ nombre }}</th>
+      {% for desde, hasta in tramos %}
+      <td>{{ desde }} a {{ hasta }}{% for e in desde.errors %}<p class="error">{{ e }}</p>{% endfor %}</td>
+      {% endfor %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="dato">Deja vacío un día para que quede cerrado.</p>

@@ -1,0 +1,185 @@
+{% extends "panel/base.html" %}
+{% block titulo %}{{ c.nombre }}{% endblock %}
+{% block contenido %}
+<div class="cabecera">
+  <div>
+    <p class="dato">{{ c.tipo.nombre }} · <a href="{{ url_sitio }}" target="_blank" rel="noopener">{{ url_sitio }}</a></p>
+    <h1>{{ c.nombre }} <span class="etiqueta etiqueta-{{ estado }}">{{ estado|capfirst }}</span></h1>
+  </div>
+  <div class="acciones">
+    <a class="boton" href="{{ url_sitio }}" target="_blank" rel="noopener">Ver el sitio{% if not c.publicado %} (vista previa){% endif %}</a>
+    {% if c.publicado %}
+      <form method="post" action="{% url 'panel:accion' c.pk 'despublicar' %}">{% csrf_token %}<button class="boton" type="submit">Despublicar</button></form>
+    {% else %}
+      <form method="post" action="{% url 'panel:accion' c.pk 'publicar' %}">{% csrf_token %}<button class="boton boton-principal" type="submit">Publicar</button></form>
+    {% endif %}
+  </div>
+</div>
+
+<nav class="pestanas" aria-label="Secciones del negocio">
+  {% for clave, nombre in pestanas %}
+  <a href="?p={{ clave }}"{% if clave == pestana %} aria-current="page"{% endif %}>{{ nombre }}</a>
+  {% endfor %}
+</nav>
+
+{% if pestana == "resumen" %}
+  {% if c.suspendido %}<p class="mensaje mensaje-warning">Suspendido: el sitio no acepta reservas en línea. La app y las citas siguen intactas.</p>{% endif %}
+  <section class="tarjeta">
+    <h2>Este mes</h2>
+    <div class="cifras">
+      <div><strong>{{ kpis.citas }}</strong><span>citas del mes</span></div>
+      <div><strong>{{ proximas }}</strong><span>próximas (desde ahora)</span></div>
+      <div><strong>{{ kpis.por_confirmar }}</strong><span>por confirmar ahora</span></div>
+      <div><strong>{{ kpis.confirmacion_pct|default_if_none:"—" }}{% if kpis.confirmacion_pct is not None %} %{% endif %}</strong><span>reservas web confirmadas</span></div>
+      <div><strong>{{ kpis.inasistencia_pct|default_if_none:"—" }}{% if kpis.inasistencia_pct is not None %} %{% endif %}</strong><span>no vinieron</span></div>
+      <div><strong>{{ kpis.ocupacion_pct|default_if_none:"—" }}{% if kpis.ocupacion_pct is not None %} %{% endif %}</strong><span>ocupación del horario</span></div>
+      <div><strong>{{ kpis.respuesta_mediana_min|default_if_none:"—" }}{% if kpis.respuesta_mediana_min is not None %} min{% endif %}</strong><span>en confirmar (mediana)</span></div>
+      <div><strong>{{ kpis.espera_mediana_min|default_if_none:"—" }}{% if kpis.espera_mediana_min is not None %} min{% endif %}</strong><span>de espera en el local</span></div>
+      <div><strong>{{ kpis.vuelven_pct|default_if_none:"—" }}{% if kpis.vuelven_pct is not None %} %{% endif %}</strong><span>{{ voc.clientes }} que vuelven</span></div>
+    </div>
+  </section>
+  <section class="tarjeta">
+    <h2>Sitio web (últimos 30 días)</h2>
+    <dl class="pares">{% for k, v in metricas.items %}<dt>{{ k }}</dt><dd>{{ v|default_if_none:"sin datos" }}</dd>{% endfor %}</dl>
+  </section>
+  <section class="tarjeta">
+    <h2>Historial del panel</h2>
+    <ul class="historial">{% for e in eventos %}<li><span class="dato">{{ e.fecha|date:"d/m/Y H:i" }}</span> {{ e.accion }}{% if e.detalle %} · {{ e.detalle }}{% endif %}{% if e.usuario %} <span class="dato">({{ e.usuario.correo }})</span>{% endif %}</li>{% empty %}<li>Sin cambios todavía.</li>{% endfor %}</ul>
+  </section>
+
+{% elif pestana == "sitio" %}
+  <form method="post" enctype="multipart/form-data" class="tarjeta formulario">
+    {% csrf_token %}
+    <h2>Textos y fotos del sitio</h2>
+    <p class="dato">Enlace directo a la reserva, para mandarlo por WhatsApp o ponerlo en redes:
+      <a href="{{ url_sitio }}/reservar/" target="_blank" rel="noopener"><strong>{{ url_sitio }}/reservar/</strong></a></p>
+    {% if form.non_field_errors %}<p class="error">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+    <div class="dos">{% for campo in form %}{% include "panel/_campo.html" with campo=campo %}{% endfor %}</div>
+    <button class="boton boton-principal" type="submit">Guardar</button>
+  </form>
+
+{% elif pestana == "servicios" %}
+  <form method="post" class="tarjeta formulario">
+    {% csrf_token %}
+    <h2>{{ voc.servicios|capfirst }}</h2>
+    {{ formset.management_form }}
+    <div class="tabla-envoltura">
+    <table>
+      <thead><tr><th>Nombre</th><th>Lo que ve el {{ voc.cliente }}</th><th>Duración</th><th>Margen</th><th>Precio desde</th><th>Indicaciones</th><th>Reservable</th><th>Visible</th><th>Orden</th></tr></thead>
+      <tbody>
+      {% for t in formset %}
+        <tr>{{ t.id }}
+          <td>{{ t.nombre }}{% for e in t.nombre.errors %}<p class="error">{{ e }}</p>{% endfor %}</td><td>{{ t.motivo_paciente }}</td>
+          <td>{{ t.duracion_min }}</td><td>{{ t.margen_min }}</td><td>{{ t.precio_desde }}</td><td>{{ t.indicaciones }}</td>
+          <td>{{ t.reservable }}</td><td>{{ t.visible }}</td><td>{{ t.orden }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <p class="dato">Para quitar un servicio sin perder su historial, desmarca «Reservable» y «Visible».</p>
+    <button class="boton boton-principal" type="submit">Guardar</button>
+  </form>
+
+{% elif pestana == "horario" %}
+  <form method="post" class="tarjeta formulario">
+    {% csrf_token %}
+    <h2>Horario del negocio</h2>
+    {% include "panel/_horario.html" with horario=form %}
+    <button class="boton boton-principal" type="submit">Guardar</button>
+  </form>
+
+{% elif pestana == "equipo" %}
+  <form method="post" class="tarjeta formulario">
+    {% csrf_token %}
+    <input type="hidden" name="accion" value="profesionales">
+    <h2>{{ voc.profesionales|capfirst }}</h2>
+    <p class="dato">Agenda: {% if c.opciones_efectivas.modo_agenda == "por_profesional" %}un profesional por cuenta (atienden en paralelo){% else %}compartida (una cita a la vez){% endif %}. Se cambia en Opciones.</p>
+    {{ formset.management_form }}
+    {% for p in formset %}
+      <fieldset class="profesional">{{ p.id }}
+        <div class="dos">
+          {% include "panel/_campo.html" with campo=p.nombre %}
+          {% include "panel/_campo.html" with campo=p.detalle %}
+          {% include "panel/_campo.html" with campo=p.orden %}
+          {% include "panel/_campo.html" with campo=p.activo %}
+        </div>
+        {% include "panel/_campo.html" with campo=p.servicios %}
+      </fieldset>
+    {% endfor %}
+    <button class="boton boton-principal" type="submit">Guardar</button>
+  </form>
+
+  <section class="tarjeta">
+    <h2>Cuentas de la app</h2>
+    <div class="tabla-envoltura">
+    <table>
+      <thead><tr><th>Correo</th><th>Ve</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody>
+      {% for u in cuentas %}
+        <tr>
+          <td>{{ u.correo }}{% if u.nombre %}<br><span class="dato">{{ u.nombre }}</span>{% endif %}</td>
+          <td>{% if u.profesional %}Su agenda ({{ u.profesional.nombre }}){% else %}Toda la agenda{% endif %}</td>
+          <td>{% if u.activo %}Activa{% else %}Desactivada{% endif %}</td>
+          <td class="acciones">
+            <form method="post" action="{% url 'panel:accion_cuenta' c.pk u.pk 'contrasena' %}">{% csrf_token %}<button class="boton" type="submit">Nueva contraseña</button></form>
+            <form method="post" action="{% url 'panel:accion_cuenta' c.pk u.pk 'cerrar-sesiones' %}">{% csrf_token %}<button class="boton" type="submit">Cerrar sesión en todos los equipos</button></form>
+            {% if u.activo %}
+            <form method="post" action="{% url 'panel:accion_cuenta' c.pk u.pk 'desactivar' %}">{% csrf_token %}<button class="boton boton-peligro" type="submit">Desactivar</button></form>
+            {% else %}
+            <form method="post" action="{% url 'panel:accion_cuenta' c.pk u.pk 'activar' %}">{% csrf_token %}<button class="boton" type="submit">Activar</button></form>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4">Sin cuentas todavía.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    <form method="post" class="formulario">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="cuenta">
+      <h3>Agregar una cuenta</h3>
+      <div class="dos">{% for campo in cuenta %}{% include "panel/_campo.html" with campo=campo %}{% endfor %}</div>
+      <button class="boton boton-principal" type="submit">Crear cuenta</button>
+    </form>
+  </section>
+
+{% elif pestana == "opciones" %}
+  <form method="post" class="tarjeta formulario">
+    {% csrf_token %}
+    <h2>Opciones del negocio</h2>
+    {% for campo in form %}{% include "panel/_campo.html" with campo=campo %}{% endfor %}
+    <button class="boton boton-principal" type="submit">Guardar</button>
+  </form>
+
+{% elif pestana == "servicio" %}
+  <section class="tarjeta">
+    <h2>Servicio</h2>
+    <form method="post" class="formulario">
+      {% csrf_token %}
+      {% include "panel/_campo.html" with campo=form.servicio_hasta %}
+      <button class="boton" type="submit">Guardar fecha</button>
+    </form>
+    {% if vence is not None %}<p class="dato">{% if vence < 0 %}El servicio venció.{% else %}Faltan {{ vence }} días.{% endif %}</p>{% endif %}
+    <h3>Suspensión</h3>
+    <p>Suspender deja de aceptar reservas en línea y muestra el WhatsApp del negocio. <strong>Nunca cancela citas</strong>: la app sigue funcionando y los datos se conservan.</p>
+    {% if c.suspendido %}
+      <form method="post" action="{% url 'panel:accion' c.pk 'reactivar' %}">{% csrf_token %}<input type="hidden" name="volver" value="?p=servicio"><button class="boton boton-principal" type="submit">Reactivar</button></form>
+    {% else %}
+      <form method="post" action="{% url 'panel:accion' c.pk 'suspender' %}" class="formulario">{% csrf_token %}
+        <input type="hidden" name="volver" value="?p=servicio">
+        <label for="motivo">Motivo (opcional)</label><input id="motivo" name="motivo" maxlength="200">
+        <button class="boton boton-peligro" type="submit">Suspender</button>
+      </form>
+    {% endif %}
+    <h3>Exportar datos</h3>
+    <p>Para entregarle al negocio si deja el servicio. Nada se borra por vencimiento.</p>
+    <div class="acciones">
+      <a class="boton" href="{% url 'panel:exportar' c.pk 'citas' %}">Citas (CSV)</a>
+      <a class="boton" href="{% url 'panel:exportar' c.pk 'clientes' %}">{{ voc.clientes|capfirst }} (CSV)</a>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}

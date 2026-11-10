@@ -1,0 +1,21 @@
+{% extends "sitio/base.html" %}
+{% load static %}
+{% block titulo %}Tu cita · {{ consultorio.nombre }}{% endblock %}
+{% block cabecera %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block contenido %}
+<header class="barra">
+  <a class="marca" href="/">{{ consultorio.nombre }}</a>
+</header>
+<main class="pagina">
+  <div class="error" id="error" role="alert" hidden></div>
+  <div class="pagina-tarjeta" id="cita" aria-live="polite"><p class="dato">Cargando tu cita…</p></div>
+</main>
+<footer class="pie-simple"><a href="{% url 'privacidad' %}">Política de datos</a></footer>
+{{ config|json_script:"config" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'sitio/comun.js' %}" defer></script>
+<script src="{% static 'sitio/cita.js' %}" defer></script>
+{% endblock %}

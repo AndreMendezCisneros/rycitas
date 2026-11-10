@@ -1,0 +1,17 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Entrar{% endblock %}
+{% block contenido %}
+<section class="tarjeta angosta">
+  <h1>Entrar al panel</h1>
+  <p class="dato">Solo para el equipo de la plataforma. La sesión se cierra tras 1 hora sin uso.</p>
+  <form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<p class="error">{{ form.non_field_errors|join:" " }}</p>{% endif %}
+    <label for="id_username">Correo</label>
+    <input id="id_username" name="username" type="email" autocomplete="username" required value="{{ form.username.value|default:'' }}">
+    <label for="id_password">Contraseña</label>
+    <input id="id_password" name="password" type="password" autocomplete="current-password" required>
+    <button class="boton boton-principal" type="submit">Entrar</button>
+  </form>
+</section>
+{% endblock %}

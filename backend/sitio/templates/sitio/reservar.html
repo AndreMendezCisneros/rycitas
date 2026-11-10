@@ -1,0 +1,71 @@
+{% extends "sitio/base.html" %}{% load static %}
+{% block titulo %}Reservar · {{ c.nombre }}{% endblock %}
+{% block clase_cuerpo %}rubro-{{ rubro }} pagina-reservar{% if embebida %} embebida{% endif %}{% endblock %}
+{% block descripcion %}Reserva tu cita en {{ c.nombre }} en menos de un minuto, sin crear cuenta.{% endblock %}
+{% block cabecera %}
+  <meta name="robots" content="noindex">
+{% endblock %}
+{% block estilos %}<link rel="stylesheet" href="{% static 'sitio/reservar.css' %}">{% endblock %}
+
+{% block contenido %}
+<div class="rv-app" id="reservar">
+  <header class="rv-barra">
+    <div class="rv-negocio">
+      {% if logo %}<img class="rv-logo" src="{{ logo }}" alt="" width="40" height="40">{% else %}<span class="rv-logo rv-iniciales" aria-hidden="true">{{ c.nombre|slice:":1"|upper }}</span>{% endif %}
+      <div>
+        <strong>{{ c.nombre }}</strong>
+        <span>Reserva en línea · sin crear cuenta</span>
+      </div>
+    </div>
+    {% if embebida %}
+    <button class="rv-cerrar" type="button" id="rv-cerrar" aria-label="Cerrar la reserva">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+    {% elif volver_a %}
+    <a class="rv-cerrar" href="{{ volver_a }}" aria-label="Ir al sitio de {{ c.nombre }}">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    </a>
+    {% endif %}
+  </header>
+
+  <main class="rv-principal" id="columnas-reserva">
+    <section class="reserva rv-tarjeta" aria-labelledby="reserva-titulo">
+      <ol class="progreso" id="progreso" aria-hidden="true"><li></li><li></li><li></li><li></li></ol>
+      <div class="reserva-cabecera">
+        <button class="rv-atras" type="button" id="volver" hidden>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Atrás
+        </button>
+        <span class="dato" id="paso-texto" aria-live="polite">Paso 1 de 4</span>
+      </div>
+      <h1 class="reserva-titulo" id="reserva-titulo" tabindex="-1">¿Qué te trae por aquí?</h1>
+      <div class="error" id="error" role="alert" hidden></div>
+      <div id="paso" class="rv-paso">
+        <noscript>
+          <p>Para reservar en línea necesitas activar JavaScript. También puedes escribirnos:</p>
+          <a class="boton boton-bloque" href="https://wa.me/{{ c.whatsapp }}" rel="noopener">Escribir por WhatsApp</a>
+        </noscript>
+      </div>
+    </section>
+
+    <aside class="mis-citas rv-tarjeta" id="mis-citas" aria-labelledby="t-mis-citas" hidden>
+      <h2 id="t-mis-citas">Mis citas</h2>
+      <p class="exito" id="aviso-citas" role="status" hidden></p>
+      <div id="lista-citas"></div>
+    </aside>
+
+    <p class="rv-pie">
+      <a href="/privacidad/" target="_blank" rel="noopener">Política de datos</a> ·
+      Reservas con <strong>RyCitas</strong>
+    </p>
+  </main>
+
+  <div class="rv-resumen" id="rv-resumen" hidden aria-live="polite"></div>
+</div>
+{{ config|json_script:"config" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'sitio/comun.js' %}" defer></script>
+<script src="{% static 'sitio/reserva.js' %}" defer></script>
+{% endblock %}

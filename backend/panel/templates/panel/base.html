@@ -1,0 +1,27 @@
+{% load static %}<!doctype html>
+<html lang="es-PE">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% block titulo %}Panel{% endblock %} · RyCitas</title>
+  <link rel="icon" href="{% static 'sitio/rycitas-logo.svg' %}" type="image/svg+xml">
+  <link rel="stylesheet" href="{% static 'panel/panel.css' %}">
+</head>
+<body>
+<header class="barra">
+  <a class="marca" href="{% url 'panel:lista' %}"><img src="{% static 'sitio/rycitas-logo.svg' %}" alt="" width="28" height="28"> RyCitas <span>· Panel</span></a>
+  {% if user.is_authenticated and user.is_staff %}
+  <nav>
+    <a href="{% url 'panel:lista' %}">Negocios</a>
+    <a class="boton" href="{% url 'panel:nuevo' %}">+ Nuevo negocio</a>
+    <form method="post" action="{% url 'panel:salir' %}">{% csrf_token %}<button class="enlace" type="submit">Salir ({{ user.correo }})</button></form>
+  </nav>
+  {% endif %}
+</header>
+<main>
+  {% for m in messages %}<p class="mensaje mensaje-{{ m.tags }}" role="status">{{ m }}</p>{% endfor %}
+  {% block contenido %}{% endblock %}
+</main>
+</body>
+</html>

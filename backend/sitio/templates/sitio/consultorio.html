@@ -1,0 +1,238 @@
+{% extends "sitio/base.html" %}
+{% load static %}
+{% block titulo %}{{ c.nombre }} · {% if not equipo %}{{ c.doctor }} · {% endif %}{{ titulo_seo }}{% endblock %}
+{% block clase_cuerpo %}rubro-{{ rubro }}{% endblock %}
+{% block descripcion %}{{ descripcion }}{% endblock %}
+
+{% block cabecera %}
+  <link rel="canonical" href="{{ url_canonica }}">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_PE">
+  <meta property="og:site_name" content="{{ c.nombre }}">
+  <meta property="og:title" content="{{ c.nombre }} · {{ c.doctor }}">
+  <meta property="og:description" content="{{ descripcion }}">
+  <meta property="og:url" content="{{ url_canonica }}">
+  {% if imagen %}<meta property="og:image" content="{{ imagen }}">{% endif %}
+  <script type="application/ld+json">{{ datos_estructurados|safe }}</script>
+{% endblock %}
+
+{% block contenido %}
+<header class="barra">
+  <a class="marca" href="#inicio">
+    {% if logo %}<img src="{{ logo }}" alt="" width="40" height="40">{% endif %}
+    <span>{{ c.nombre }}</span>
+  </a>
+  <nav class="enlaces" aria-label="Secciones">
+    <a href="#tratamientos">{{ voc.servicios|capfirst }}</a>
+    <a href="#como-reservar">Cómo reservar</a>
+    <a href="#consultorio">{{ voc.el_local|capfirst }}</a>
+    <a href="#horario">Horario</a>
+    <a href="#preguntas">Preguntas</a>
+  </nav>
+  {% if suspendido %}<a class="boton" href="https://wa.me/{{ c.whatsapp }}" rel="noopener">Escribir por WhatsApp</a>{% else %}<a class="boton" href="#reservar">Reservar cita</a>{% endif %}
+</header>
+
+<main id="inicio">
+  <section class="portada">
+    <div class="portada-rejilla">
+      <div>
+        <p class="estado" id="estado-atencion" role="status" hidden></p>
+        <h1>{{ tipo.titulo.0 }} <em>{{ tipo.titulo.1 }}</em></h1>
+        <p class="introduccion">Sin llamar ni crear una cuenta. Eliges el día y la hora, y te confirmamos por WhatsApp.</p>
+        {% if suspendido %}<p class="aviso" role="status">Por ahora las reservas en línea no están disponibles. Escríbenos por WhatsApp y te atendemos.</p>{% endif %}
+        <div class="acciones">
+          {% if suspendido %}<a class="boton boton-principal" href="https://wa.me/{{ c.whatsapp }}" rel="noopener">Escribir por WhatsApp</a>{% else %}<a class="boton boton-principal" href="#reservar">Reservar mi cita</a>{% endif %}
+          <a class="boton boton-claro" href="#tratamientos">Ver {{ voc.servicios }}</a>
+        </div>
+      </div>
+      <div>
+        {% if equipo %}
+        <div class="equipo">
+          {% for p in equipo %}
+          <div class="tarjeta-doctor tarjeta-profesional">
+            {% if p.foto %}<img class="foto" src="{{ p.foto }}" alt="{{ p.nombre }}" width="56" height="56">{% else %}<div class="foto monograma" aria-hidden="true">{{ p.iniciales }}</div>{% endif %}
+            <div><h2>{{ p.nombre }}</h2>{% if p.detalle %}<p>{{ p.detalle }}</p>{% endif %}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="tarjeta-doctor">
+          {% if c.foto %}
+            <img class="foto" src="{{ c.foto }}" alt="{{ c.doctor }}" width="72" height="72">
+          {% else %}
+            <div class="foto monograma" aria-hidden="true">{{ iniciales }}</div>
+          {% endif %}
+          <div>
+            <h2>{{ c.doctor }}</h2>
+            {% if c.colegiatura %}
+            <p class="numeros">
+              {% if colegiatura_url %}<a href="{{ colegiatura_url }}" target="_blank" rel="noopener">Colegiatura N.º {{ c.colegiatura }}</a>{% else %}Colegiatura N.º {{ c.colegiatura }}{% endif %}
+            </p>
+            {% endif %}
+            {% if contenido.anos_practica %}<p>{{ contenido.anos_practica }} años de práctica{% if contenido.publico %} · {{ contenido.publico }}{% endif %}</p>{% elif contenido.publico %}<p>{{ contenido.publico }}</p>{% endif %}
+            {% if c.presentacion %}<p>{{ c.presentacion }}</p>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+        <div class="maqueta" aria-hidden="true">
+          <p class="dato">Así te confirmamos por WhatsApp</p>
+          <p class="burbuja">Hola Rosa, tu cita de {{ ejemplo_servicio }} quedó confirmada para mañana a las 4:00 p. m.</p>
+          <p class="burbuja burbuja-ok">¡Gracias! Ahí estaré</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="franja" aria-label="Por qué reservar aquí">
+    <ul>
+      {% if tipo.salud %}
+      <li><strong>Colegiatura vigente</strong><span>Atención a cargo de un profesional colegiado.</span></li>
+      <li><strong>Instrumental esterilizado</strong><span>Limpio y preparado para cada {{ voc.cliente }}.</span></li>
+      {% else %}
+      <li><strong>Atención puntual</strong><span>Con tu hora reservada, sin hacer cola.</span></li>
+      <li><strong>Precios claros</strong><span>Ves el precio de referencia antes de reservar.</span></li>
+      {% endif %}
+      <li><strong>Pagas después de tu atención</strong><span>{% if contenido.formas_de_pago %}{{ contenido.formas_de_pago|join:", " }}.{% else %}Reservar no cuesta nada.{% endif %}</span></li>
+      <li><strong>Te confirmamos por WhatsApp</strong><span>Con todos los datos de tu cita.</span></li>
+    </ul>
+  </section>
+
+  <section class="seccion" id="tratamientos" aria-labelledby="t-tratamientos">
+    <span class="etiqueta">Precios claros</span>
+    <h2 id="t-tratamientos">{{ voc.servicios|capfirst }}</h2>
+    <p class="introduccion">Precios desde, para que sepas cuánto esperar. El monto final depende de tu caso y te lo explicamos antes de empezar.</p>
+    <div class="rejilla">
+      {% for t in c.tratamientos %}
+      <article class="tarjeta-color">
+        <h3>{{ t.nombre }}</h3>
+        {% if t.descripcion %}<p>{{ t.descripcion }}</p>{% endif %}
+        <p class="detalle numeros">
+          <span>Aprox. {{ t.duracion_min }} min</span>
+          {% if t.precio_desde %}<span>Desde S/ {{ t.precio_desde|floatformat:"-2" }}</span>{% endif %}
+        </p>
+        {% if t.reservable %}
+          <a class="boton" href="#reservar" data-tratamiento="{{ t.slug }}">Reservar este</a>
+        {% else %}
+          <p class="nota-evaluacion">Se agenda tras la evaluación</p>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="seccion" id="como-reservar" aria-labelledby="t-como">
+    <span class="etiqueta">Sin complicaciones</span>
+    <h2 id="t-como">Cómo reservar</h2>
+    <ol class="pasos">
+      {% for titulo, texto in pasos_reserva %}
+      <li><h3>{{ titulo }}</h3><p>{{ texto }}</p></li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="seccion seccion-reserva" id="reservar" aria-labelledby="t-reservar">
+    <h2 id="t-reservar">Reserva tu cita</h2>
+    <div class="reserva-columnas" id="columnas-reserva">
+      <div class="reserva">
+        <ol class="progreso" id="progreso" aria-hidden="true"><li></li><li></li><li></li><li></li></ol>
+        <div class="reserva-cabecera">
+          <span class="dato" id="paso-texto" aria-live="polite">Paso 1 de 4</span>
+          <button class="boton-texto" type="button" id="volver" hidden>Volver</button>
+        </div>
+        <h3 class="reserva-titulo" id="reserva-titulo" tabindex="-1">¿Qué te trae por aquí?</h3>
+        <div class="error" id="error" role="alert" hidden></div>
+        <div id="paso">
+          <noscript>
+            <p>Para reservar en línea necesitas activar JavaScript. También puedes escribirnos:</p>
+            <a class="boton boton-bloque" href="https://wa.me/{{ c.whatsapp }}" rel="noopener">Escribir por WhatsApp</a>
+          </noscript>
+        </div>
+      </div>
+      <aside class="mis-citas" id="mis-citas" aria-labelledby="t-mis-citas" hidden>
+        <h3 id="t-mis-citas">Mis citas</h3>
+        <p class="exito" id="aviso-citas" role="status" hidden></p>
+        <div id="lista-citas"></div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="seccion" id="consultorio" aria-labelledby="t-consultorio">
+    <span class="etiqueta">Por dentro</span>
+    <h2 id="t-consultorio">{{ voc.el_local|capfirst }}</h2>
+    {% if foto_consultorio %}<img class="foto-consultorio" src="{{ foto_consultorio }}" alt="Interior de {{ c.nombre }}" loading="lazy" width="1200" height="675">{% endif %}
+    <div class="rejilla">
+      {% for b in contenido.bloques_confianza %}{% if b.titulo %}
+      <article class="tarjeta-color"><h3>{{ b.titulo }}</h3><p>{{ b.texto }}</p></article>
+      {% endif %}{% endfor %}
+    </div>
+  </section>
+
+  <section class="seccion" id="horario" aria-labelledby="t-horario">
+    <span class="etiqueta">Cómo llegar</span>
+    <h2 id="t-horario">Horario y ubicación</h2>
+    <div class="dos-columnas">
+      <table class="horario">
+        <caption class="oculto">Horario de atención</caption>
+        <tbody>
+        {% for d in c.horario %}
+          <tr data-dia="{{ d.dia_semana }}"><th scope="row">{{ d.dia }}</th><td>{% if d.tramos %}{{ d.tramos|join:" y " }}{% else %}Cerrado{% endif %}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <div>
+        <h3>{{ c.nombre }}</h3>
+        <p>{{ c.direccion }}{% if contenido.referencias %}<br><span class="dato">{{ contenido.referencias }}</span>{% endif %}</p>
+        {% if c.mapa_url %}<a class="boton" href="{{ c.mapa_url }}" target="_blank" rel="noopener">Ver en Google Maps</a>{% endif %}
+        <h3 class="titulo-whatsapp">WhatsApp</h3>
+        <div class="fila-whatsapp">
+          <span class="numero-wa" id="numero-wa">+{{ c.whatsapp }}</span>
+          <button class="boton" type="button" id="copiar-wa">Copiar</button>
+          <a class="boton" href="https://wa.me/{{ c.whatsapp }}" rel="noopener">Escribir</a>
+        </div>
+        <p class="dato" id="copiado" role="status" hidden></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion preguntas" id="preguntas" aria-labelledby="t-preguntas">
+    <h2 id="t-preguntas">Preguntas frecuentes</h2>
+    {% for p in preguntas %}
+    <details>
+      <summary>{{ p.pregunta }}</summary>
+      <p>{{ p.respuesta }}</p>
+    </details>
+    {% endfor %}
+  </section>
+</main>
+
+<footer class="pie">
+  <div class="pie-rejilla">
+    <div>
+      <h2>{{ c.nombre }}</h2>
+      <p>{{ c.direccion }}</p>
+      <p class="numeros">WhatsApp: +{{ c.whatsapp }}</p>
+    </div>
+    <div>
+      <h2>Horario</h2>
+      {% for d in c.horario %}{% if d.tramos %}<p class="numeros">{{ d.dia }}: {{ d.tramos|join:" y " }}</p>{% endif %}{% endfor %}
+    </div>
+  </div>
+  <p id="uso-datos">Uso de tus datos: pedimos solo tu nombre, tu celular y el {{ voc.servicio }} que eliges, para registrar tu cita y avisarte sobre ella, según la Ley N.º 29733. <a href="{% url 'privacidad' %}">Política de datos</a>.</p>
+  <p>Reservas con RyCitas</p>
+</footer>
+
+<div class="aviso-horario" id="aviso-horario" role="region" aria-label="Próximo horario libre" hidden>
+  <div><strong>Próximo horario libre</strong><span id="aviso-hora"></span></div>
+  <button class="boton boton-principal" type="button" id="aviso-reservar">Reservar</button>
+  <button class="cerrar-aviso" type="button" id="aviso-cerrar" aria-label="Cerrar aviso">×</button>
+</div>
+
+{{ config|json_script:"config" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'sitio/comun.js' %}" defer></script>
+<script src="{% static 'sitio/reserva.js' %}" defer></script>
+<script src="{% static 'sitio/pagina.js' %}" defer></script>
+{% if analitica %}<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "{{ analitica }}"}'></script>{% endif %}
+{% endblock %}

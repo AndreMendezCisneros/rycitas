@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+backend/staticfiles/
+backend/media/
+.venv/
+
+# Secretos y datos del servidor
+.env
+deploy/certs/
+deploy/secretos/
+deploy/app_web/
+
+# Clave de la cuenta de servicio de Firebase (docs/FIREBASE.md): nunca al repositorio
+firebase.json
+*firebase-adminsdk*.json
+
+# Documentos internos que no van al repositorio público
+/RYJEC_EXPEDIENTE_MAESTRO/
+/*.pdf
+/*.docx
+/AUDITORIA.md
+~$*
+
+# Dependencias y compilados
+node_modules/
+dist/
+htmlcov/
+.vscode/
+.idea/
+*.log
+
+# Firma de Android y configuración de Firebase de cada entorno
+*.jks
+*.keystore
+key.properties
+google-services.json
+GoogleService-Info.plist
+
+# Repositorio propio (github.com/AndreMendezCisneros/visage-artisan-hub); aquí solo va su compilado en backend/sitios_propios
+/sitios/visage-artisan-hub/

@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Solo en dev: el backend local no tiene HTTPS. prod no lo permite (RNF-07). -->
+    <application android:usesCleartextTraffic="true" />
+</manifest>

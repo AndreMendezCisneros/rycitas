@@ -1,0 +1,22 @@
+{% load static sitio_extras %}<!doctype html>
+<html lang="es-PE">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a3922">
+  <title>{% block titulo %}RyCitas{% endblock %}</title>
+  <meta name="description" content="{% block descripcion %}Reserva tu cita dental en línea en menos de un minuto.{% endblock %}">
+  {% block cabecera %}{% endblock %}
+  <link rel="icon" href="{% block icono %}{% static 'sitio/rycitas-logo.svg' %}{% endblock %}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap">
+  <style>{% css_esencial %}</style>
+  <link rel="stylesheet" href="{% static 'sitio/sitio.css' %}">
+  {% block estilos %}{% endblock %}{# después de sitio.css: lo de cada página gana a lo común #}
+</head>
+<body class="{% block clase_cuerpo %}{% endblock %}">
+{% block contenido %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>
