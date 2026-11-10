@@ -6,3 +6,5 @@ Caddyfile text eol=lf
 *.webp binary
 *.wav binary
 *.pdf binary
+*.caddy text eol=lf
+*.yml text eol=lf

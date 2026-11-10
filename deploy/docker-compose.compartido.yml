@@ -1,0 +1,20 @@
+# Variante para un servidor que ya tiene su propio Caddy en 80/443 (varios sistemas en la misma máquina).
+# Se activa desde deploy/.env:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.compartido.yml
+# y el Caddy del servidor usa deploy/caddy-servidor/rycitas.caddy (ver deploy/README.md, «Servidor compartido»).
+#
+# Diferencias con el despliegue normal:
+# - El Caddy de este compose no arranca (queda en un perfil que nadie activa).
+# - Django escucha solo en 127.0.0.1:${WEB_PUERTO_LOCAL}; desde fuera no se llega sin pasar por el Caddy del servidor.
+# - Las imágenes subidas quedan en deploy/media (carpeta del servidor) para que ese Caddy las sirva.
+# - La base de datos sigue siendo propia y sin puerto publicado: ningún otro sistema la ve.
+
+services:
+  caddy:
+    profiles: ["caddy-propio"]
+
+  web:
+    ports:
+      - "127.0.0.1:${WEB_PUERTO_LOCAL:-18100}:8000"
+    volumes:
+      - ./media:/media

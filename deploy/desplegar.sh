@@ -13,8 +13,14 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 test -f .env || { echo "Falta deploy/.env (ver .env.example)"; exit 1; }
-test -f certs/origen.pem || { echo "Falta deploy/certs/origen.pem (ver deploy/README.md)"; exit 1; }
 mkdir -p app_web secretos
+if grep -q '^COMPOSE_FILE=.*compartido' .env; then
+  # Servidor compartido: el Caddy del servidor pone los certificados y sirve deploy/media.
+  # La imagen escribe como uid 1000; el Caddy del servidor solo necesita leer.
+  mkdir -p media && chown 1000 media && chmod 755 media
+else
+  test -f certs/origen.pem || { echo "Falta deploy/certs/origen.pem (ver deploy/README.md)"; exit 1; }
+fi
 
 HISTORIAL=.versiones          # una versión desplegada con éxito por línea; la última es la actual
 anterior="$(tail -n 1 "$HISTORIAL" 2>/dev/null || true)"

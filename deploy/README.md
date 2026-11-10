@@ -63,6 +63,30 @@ las migraciones se escriben compatibles con la versión anterior (agregar primer
 Panel: `https://rycitas.ryjec.com/panel/` (y `/admin/`). El alta de un consultorio (RF-33) se hace ahí: crear el consultorio con su horario y
 tratamientos, y luego su usuario.
 
+### 3b. Servidor compartido (ya hay un Caddy en 80/443)
+
+Cuando el VPS aloja otros sistemas y su propio Caddy ya ocupa los puertos 80 y 443:
+
+1. En `deploy/.env` activar la variante:
+
+   ```
+   COMPOSE_FILE=docker-compose.yml:docker-compose.compartido.yml
+   WEB_PUERTO_LOCAL=18100
+   ```
+
+   El Caddy del compose ya no arranca, Django queda solo en `127.0.0.1:18100` y las imágenes en `deploy/media`. La
+   base de datos sigue siendo un contenedor propio sin puerto publicado.
+2. Copiar `deploy/caddy-servidor/rycitas.caddy` a `/etc/caddy/sites.d/80-rycitas.caddy`, ajustando los hosts, el
+   puerto y la ruta `/opt/rycitas` si cambian. Después validar y recargar, lo que no corta los demás sitios:
+
+   ```bash
+   caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+   ```
+
+   Los certificados son automáticos por host. Cada negocio nuevo con subdominio propio se agrega a ese archivo.
+3. No hace falta `certs/origen.pem`. El firewall puede quedar como está: el archivo de Caddy reemplaza
+   `CF-Connecting-IP` cuando la petición no viene de Cloudflare, así nadie falsifica su IP entrando directo al servidor.
+
 ## 4. WhatsApp (Meta), opcional
 
 Por defecto no hace falta: el doctor confirma y recuerda desde su propio WhatsApp. Solo con `VERIFICACION_WHATSAPP=1`:
