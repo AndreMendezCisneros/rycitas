@@ -1,6 +1,8 @@
 # Un VPS, cuatro contenedores: Caddy, Django, tareas y PostgreSQL.
 x-backend: &backend
   build: ../backend
+  # Etiqueta por versión (desplegar.sh la fija con la fecha): las anteriores quedan para ./rollback.sh.
+  image: rycitas-web:${VERSION:-actual}
   env_file: .env
   restart: unless-stopped
   depends_on:

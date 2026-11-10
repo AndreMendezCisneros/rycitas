@@ -54,7 +54,13 @@ cp .env.example .env   # completar
 docker compose exec web python manage.py createsuperuser
 ```
 
-Panel: `https://dominio/admin/`. El alta de un consultorio (RF-33) se hace ahí: crear el consultorio con su horario y
+`desplegar.sh` respalda la base **antes** de migrar (desde el segundo despliegue), etiqueta cada imagen con la fecha
+(`rycitas-web:AAAAMMDDhhmmss`, conserva las 3 últimas) y, si la versión nueva no queda saludable, vuelve sola a la
+anterior. Para volver atrás a mano: `./rollback.sh` (la penúltima) o `./rollback.sh <versión>`. El rollback no deshace
+migraciones: si una dejó la base incompatible, `./restaurar.sh base-<fecha>.dump.enc` con el respaldo previo. Por eso
+las migraciones se escriben compatibles con la versión anterior (agregar primero; quitar en un despliegue posterior).
+
+Panel: `https://rycitas.ryjec.com/panel/` (y `/admin/`). El alta de un consultorio (RF-33) se hace ahí: crear el consultorio con su horario y
 tratamientos, y luego su usuario.
 
 ## 4. WhatsApp (Meta), opcional

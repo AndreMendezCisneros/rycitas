@@ -4,6 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 set -a; . ./.env; set +a
+# Desde cron no llega VERSION: se usa la imagen en servicio (la última de .versiones).
+export VERSION="${VERSION:-$(tail -n 1 .versiones 2>/dev/null || echo actual)}"
 
 : "${RESPALDO_CLAVE:?Falta RESPALDO_CLAVE}"
 : "${RCLONE_DESTINO:?Falta RCLONE_DESTINO}"
@@ -14,7 +16,13 @@ docker compose exec -T db pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc \
   | openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:RESPALDO_CLAVE \
   | rclone rcat "$RCLONE_DESTINO/base-$fecha.dump.enc"
 
-docker compose exec -T web tar -C /media -cf - . \
+# Con la web en marcha se lee de ella; si no (antes de levantarla), con un contenedor de un solo uso.
+if [ -n "$(docker compose ps --status running -q web)" ]; then
+  medios=(docker compose exec -T web)
+else
+  medios=(docker compose run --rm --no-deps -T web)
+fi
+"${medios[@]}" tar -C /media -cf - . \
   | openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:RESPALDO_CLAVE \
   | rclone rcat "$RCLONE_DESTINO/media-$fecha.tar.enc"
 

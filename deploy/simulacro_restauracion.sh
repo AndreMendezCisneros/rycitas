@@ -8,6 +8,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 set -a; . ./.env; set +a
+export VERSION="${VERSION:-$(tail -n 1 .versiones 2>/dev/null || echo actual)}"
 
 : "${RESPALDO_CLAVE:?Falta RESPALDO_CLAVE}"
 : "${RCLONE_DESTINO:?Falta RCLONE_DESTINO}"

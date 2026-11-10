@@ -41,3 +41,6 @@ GoogleService-Info.plist
 
 # Repositorio propio (github.com/AndreMendezCisneros/visage-artisan-hub); aquí solo va su compilado en backend/sitios_propios
 /sitios/visage-artisan-hub/
+
+# Historial de versiones desplegadas en el servidor
+/deploy/.versiones

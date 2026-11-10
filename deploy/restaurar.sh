@@ -4,6 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 set -a; . ./.env; set +a
+export VERSION="${VERSION:-$(tail -n 1 .versiones 2>/dev/null || echo actual)}"
 
 archivo="${1:?Uso: ./restaurar.sh <archivo>. Ver copias con: rclone ls $RCLONE_DESTINO}"
 read -r -p "Esto reemplaza la base «$POSTGRES_DB» de este servidor. Escribe RESTAURAR para continuar: " respuesta
