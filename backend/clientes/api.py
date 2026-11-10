@@ -50,6 +50,11 @@ class TokenEntrada(Schema):
     renovacion: str
 
 
+class SalidaEntrada(Schema):
+    renovacion: str
+    token_fcm: str = ""  # el teléfono deja de recibir avisos
+
+
 class PerfilEntrada(Schema):
     nombre: str
     acepta_publicidad: bool | None = None  # None: no lo cambia
@@ -126,8 +131,8 @@ def refresh(request, datos: TokenEntrada):
 
 
 @router_sesion.post("/logout", response={204: None})
-def logout(request, datos: TokenEntrada):
-    autenticacion.cerrar_sesion(datos.renovacion)
+def logout(request, datos: SalidaEntrada):
+    autenticacion.cerrar_sesion(datos.renovacion, datos.token_fcm)
     return 204, None
 
 

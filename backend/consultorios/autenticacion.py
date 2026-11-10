@@ -105,10 +105,16 @@ def renovar(token: str) -> dict:
         raise invalido
 
 
-def cerrar_sesion(token: str) -> None:
+def cerrar_sesion(token: str, token_fcm: str = "") -> None:
+    """Revoca la sesión y deja de mandar avisos a ese teléfono (SEG-07): un celular prestado o devuelto ya no
+    recibe «En 30 min: tu próxima cita»."""
+    from consultorios.models import Dispositivo
+
     sesion = SesionRenovacion.objects.filter(token_hash=_hash(token)).first()
     if sesion:
         SesionRenovacion.objects.filter(familia=sesion.familia).update(revocado=True)
+        if token_fcm:
+            Dispositivo.objects.filter(usuario_id=sesion.usuario_id, token_fcm=token_fcm).delete()
 
 
 class TokenDoctor(HttpBearer):

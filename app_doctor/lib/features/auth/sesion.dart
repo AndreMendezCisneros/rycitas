@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
+import '../../core/push.dart';
 
 enum EstadoSesion { cargando, activa, cerrada }
 
@@ -47,7 +48,8 @@ class Sesion extends Notifier<EstadoSesion> {
     final token = await almacen.leer(claveRenovacion);
     if (token != null) {
       try {
-        await api.dio.post('/auth/logout', data: {'renovacion': token});
+        // Con el token del teléfono, el servidor deja de mandarle avisos (un celular prestado no los sigue viendo).
+        await api.dio.post('/auth/logout', data: {'renovacion': token, 'token_fcm': Push.ultimoToken ?? ''});
       } on DioException {
         // Sin señal igual se cierra en el teléfono; el token vence solo.
       }

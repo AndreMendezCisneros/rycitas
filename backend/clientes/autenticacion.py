@@ -177,10 +177,15 @@ def renovar(token: str) -> dict:
         raise invalido
 
 
-def cerrar_sesion(token: str) -> None:
+def cerrar_sesion(token: str, token_fcm: str = "") -> None:
+    """Revoca la sesión y deja de mandar avisos a ese teléfono (SEG-07)."""
+    from clientes.models import DispositivoCliente
+
     sesion = SesionCliente.objects.filter(token_hash=_hash(token)).first()
     if sesion:
         SesionCliente.objects.filter(familia=sesion.familia).update(revocado=True)
+        if token_fcm:
+            DispositivoCliente.objects.filter(cliente_id=sesion.cliente_id, token_fcm=token_fcm).delete()
 
 
 class TokenCliente(HttpBearer):

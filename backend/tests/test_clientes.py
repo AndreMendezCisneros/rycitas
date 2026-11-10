@@ -448,3 +448,18 @@ def test_no_elimina_datos_con_citas_por_venir_ni_desde_una_cuenta_de_profesional
     usuario = Usuario.objects.create_user("p@sonrisa.test", "clave-segura-123", consultorio=consultorio,
                                           profesional=consultorio.profesional_principal())
     assert ApiDoctor(usuario).post(f"/pacientes/{paciente.pk}/eliminar-datos").status_code == 403
+
+
+def test_logout_borra_el_dispositivo_del_telefono(cliente):
+    """SEG-07: tras cerrar sesión, ese teléfono no sigue recibiendo avisos."""
+    _registro(cliente)
+    rosa = Cliente.objects.get()
+    DispositivoCliente.objects.create(cliente=rosa, token_fcm="tok-1")
+    DispositivoCliente.objects.create(cliente=rosa, token_fcm="tok-otro")
+    from clientes.autenticacion import tokens as tokens_cliente
+
+    renovacion = tokens_cliente(rosa)["renovacion"]
+    r = cliente.post("/cliente/v1/auth/logout", {"renovacion": renovacion, "token_fcm": "tok-1"},
+                     content_type="application/json")
+    assert r.status_code == 204
+    assert list(DispositivoCliente.objects.values_list("token_fcm", flat=True)) == ["tok-otro"]

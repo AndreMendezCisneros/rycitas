@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
+import '../../core/push.dart';
 import '../auth/sesion.dart' show EstadoSesion;
 
 /// Resultado del registro: entró directo o (con la verificación por correo activa) falta el código.
@@ -65,7 +66,7 @@ class SesionCliente extends Notifier<EstadoSesion> {
     final token = await almacen.leer(claveRenovacionCliente);
     if (token != null) {
       try {
-        await api.dio.post('/auth/logout', data: {'renovacion': token});
+        await api.dio.post('/auth/logout', data: {'renovacion': token, 'token_fcm': Push.ultimoToken ?? ''});
       } on DioException {
         // Sin señal igual se cierra en el teléfono.
       }

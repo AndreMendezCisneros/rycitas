@@ -159,6 +159,19 @@ def test_cerrar_sesion_invalida_la_renovacion(doctor):
     assert refresh(token).status_code == 401
 
 
+def test_cerrar_sesion_deja_de_avisar_a_ese_telefono(doctor):
+    """SEG-07: un celular prestado o devuelto no sigue recibiendo los avisos del negocio."""
+    from consultorios.models import Dispositivo
+
+    Dispositivo.objects.create(usuario=doctor, token_fcm="tok-este")
+    Dispositivo.objects.create(usuario=doctor, token_fcm="tok-otro")
+    token = login().json()["renovacion"]
+    r = Client().post("/api/v1/auth/logout", {"renovacion": token, "token_fcm": "tok-este"},
+                      content_type="application/json")
+    assert r.status_code == 204
+    assert list(Dispositivo.objects.values_list("token_fcm", flat=True)) == ["tok-otro"]
+
+
 def test_registrar_dispositivo_es_idempotente(api, doctor):
     for _ in range(2):
         assert api.post("/dispositivos", {"token_fcm": "abc"}).status_code == 204
