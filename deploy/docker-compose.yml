@@ -1,5 +1,15 @@
 # Un VPS, cuatro contenedores: Caddy, Django, tareas y PostgreSQL.
+
+# Logs de Docker con tope: sin él, el log crece hasta llenar el disco y la base se cae (PRD-03).
+x-logs: &logs
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
 x-backend: &backend
+  <<: *logs
   build: ../backend
   # Etiqueta por versión (desplegar.sh la fija con la fecha): las anteriores quedan para ./rollback.sh.
   image: rycitas-web:${VERSION:-actual}
@@ -11,6 +21,7 @@ x-backend: &backend
 
 services:
   caddy:
+    <<: *logs
     image: caddy:2-alpine
     restart: unless-stopped
     ports:
@@ -57,6 +68,7 @@ services:
           memory: 300m
 
   db:
+    <<: *logs
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
