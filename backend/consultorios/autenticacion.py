@@ -55,8 +55,13 @@ def iniciar_sesion(correo: str, password: str) -> Usuario:
     """Tras 5 intentos fallidos la cuenta espera 15 min, incluso con la contraseña correcta."""
     ahora = timezone.now()
     with transaction.atomic():
-        usuario = Usuario.objects.select_for_update().filter(correo__iexact=correo.strip()).first()
-        if usuario is None or usuario.consultorio_id is None or not usuario.activo:
+        usuario = (
+            Usuario.objects.select_for_update(of=("self",))
+            .select_related("consultorio")
+            .filter(correo__iexact=correo.strip())
+            .first()
+        )
+        if usuario is None or usuario.consultorio_id is None or not usuario.activo or not usuario.consultorio.activo:
             # Mismo costo que una verificación real para no revelar qué correos existen.
             Usuario().set_password(password)
             raise CREDENCIALES_INVALIDAS
@@ -127,7 +132,12 @@ class TokenDoctor(HttpBearer):
             return None
         if datos.get("tipo") != "acceso":
             return None
-        usuario = Usuario.objects.select_related("consultorio").filter(pk=datos["sub"], activo=True).first()
-        if usuario is None or usuario.consultorio_id is None:
+        # Un negocio dado de baja (activo=False) deja de operar la API al instante, no cuando venza el token (SEG-16).
+        usuario = (
+            Usuario.objects.select_related("consultorio")
+            .filter(pk=datos["sub"], activo=True, consultorio__activo=True)
+            .first()
+        )
+        if usuario is None:
             return None
         return usuario

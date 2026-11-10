@@ -612,3 +612,12 @@ def test_metricas_de_asistencia_y_duracion(api, reloj, limpieza):
     assert actual["duracion_real_mediana_min"] == 40
     assert actual["inicio_tarde_mediana_min"] == 2
     assert actual["duracion_por_servicio"][0]["real_min"] == 40
+
+
+def test_un_negocio_dado_de_baja_no_opera_la_api(api, doctor, consultorio):
+    """SEG-16: al desactivar el negocio, su token deja de servir al instante y no puede volver a entrar."""
+    assert api.get("/agenda").status_code == 200
+    consultorio.activo = False
+    consultorio.save(update_fields=["activo"])
+    assert api.get("/agenda").status_code == 401
+    assert login().status_code == 401
