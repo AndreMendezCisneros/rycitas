@@ -86,7 +86,7 @@ def recordar_pendientes() -> int:
 
 
 def recordar_citas_proximas() -> int:
-    """Cada 5 min: «En 30 min: Rosa Paz · Limpieza» al profesional de cada cita confirmada que se acerca.
+    """Cada 5 min: «En 30 min: tu próxima cita» al profesional de cada cita confirmada que se acerca.
 
     La clave incluye la hora de la cita: si se mueve, el recordatorio vuelve a salir para la nueva hora.
     """
@@ -109,11 +109,11 @@ def recordar_citas_proximas() -> int:
         for cita in proximas:
             faltan = max(1, round((cita.inicio - ahora).total_seconds() / 60))
             hora = cita.inicio.astimezone(LIMA).strftime("%H:%M")
+            # Sin nombre ni servicio (DAT-05): se ve en la pantalla bloqueada y pasa por Google.
             if push.encolar(
                 consultorio.pk,
-                f"En {faltan} min: {cita.paciente.nombre}",
-                f"{cita.servicio_nombre or cita.tratamiento.nombre} a las {hora}"
-                + (f" · con {cita.profesional.nombre}" if cita.profesional_id else ""),
+                f"En {faltan} min: tu próxima cita",
+                f"A las {hora}" + (f" · con {cita.profesional.nombre}" if cita.profesional_id else ""),
                 {"tipo": "cita_proxima", "cita_id": str(cita.pk)},
                 clave=f"cita_proxima:{cita.pk}:{cita.inicio:%Y%m%d%H%M}",
                 profesional_id=cita.profesional_id,

@@ -61,8 +61,9 @@ def test_avisa_al_profesional_antes_de_su_cita(reloj, corte, equipo):
     reloj.avanzar(minutes=35)
     assert tareas.recordar_citas_proximas() == 1
     aviso = AvisoPendiente.objects.get(datos__tipo="cita_proxima")
-    assert aviso.titulo == "En 25 min: Rosa Paz"
-    assert aviso.cuerpo == "Corte clásico a las 09:00 · con Juan"
+    # Sin nombre ni servicio (DAT-05): se ve en la pantalla bloqueada y pasa por Google.
+    assert aviso.titulo == "En 25 min: tu próxima cita"
+    assert aviso.cuerpo == "A las 09:00 · con Juan"
     # Solo a Juan: la cuenta general no recibe un aviso por cada cita de cada profesional.
     assert _tokens(aviso) == {"tok-juan"}
     reloj.avanzar(minutes=5)

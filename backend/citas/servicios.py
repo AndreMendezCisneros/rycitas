@@ -455,11 +455,11 @@ def crear_prerreserva(
                     )
                 _evento(cita, "estado", "", estado)
                 if not verificar:
-                    partes = [nombre, tratamiento.nombre, _formato_fecha(inicio)]
+                    # Sin nombre ni servicio (DAT-05): el servicio puede ser un dato de salud, y el push pasa por
+                    # Google y se ve en la pantalla bloqueada. El detalle aparece al abrir la app.
+                    partes = [_formato_fecha(inicio)]
                     if consultorio.opciones_efectivas["modo_agenda"] == "por_profesional":
-                        partes.insert(2, f"con {profesional.nombre}")
-                    if ofrecido is not None:
-                        partes.append(f"ofrece {soles(ofrecido)}")
+                        partes.append(f"con {profesional.nombre}")
                     _avisar_doctor(
                         consultorio.pk, "por_aprobar", "Nueva reserva por confirmar", " · ".join(partes), cita.pk,
                         profesional.pk,
@@ -519,7 +519,7 @@ def confirmar_por_whatsapp(celular: str, texto: str) -> Cita | None:
             cita.consultorio_id,
             "nueva_cita",
             "Nueva cita",
-            f"{paciente.nombre} · {cita.tratamiento.nombre} · {_formato_fecha(cita.inicio)}",
+            _formato_fecha(cita.inicio),  # sin nombre ni servicio (DAT-05)
             cita.pk,
             cita.profesional_id,
         )
@@ -538,7 +538,7 @@ def pasar_a_aprobacion(token: str) -> Cita:
             cita.consultorio_id,
             "por_aprobar",
             "Reserva por aprobar",
-            f"{cita.nombre_ingresado} · {_formato_fecha(cita.inicio)}",
+            _formato_fecha(cita.inicio),  # sin nombre ni servicio (DAT-05)
             cita.pk,
             cita.profesional_id,
         )

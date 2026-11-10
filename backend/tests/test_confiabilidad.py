@@ -258,3 +258,17 @@ def test_las_tareas_quedan_como_sistema(cliente, limpieza, reloj):
     from citas.models import EventoCita
 
     assert not EventoCita.objects.filter(origen="").exists()
+
+
+
+def test_push_no_incluye_nombre_ni_servicio(cliente, consultorio, limpieza, django_capture_on_commit_callbacks):
+    """DAT-05: el servicio puede ser un dato de salud; el push pasa por Google y se ve con el teléfono bloqueado."""
+    from mensajeria.models import AvisoPendiente
+    from .conftest import reservar
+
+    with django_capture_on_commit_callbacks(execute=True):
+        assert reservar(cliente, nombre="Rosa Paz").status_code == 201
+    for aviso in AvisoPendiente.objects.all():
+        texto = f"{aviso.titulo} {aviso.cuerpo}"
+        assert "Rosa" not in texto and limpieza.nombre not in texto, texto
+    assert AvisoPendiente.objects.exists()
