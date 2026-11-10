@@ -705,7 +705,7 @@ def avisos_de_demora(cita: Cita, base_url: str, limite: int = 4) -> list[tuple[C
         texto = (
             f"{_saludo(c)} Vamos con unos {estimacion.retraso_min} min de retraso: tu cita de las {hora} "
             f"empezaría cerca de las {nueva}. Disculpa la espera y gracias por tu paciencia. "
-            f"Aquí ves la hora actualizada: {base_url}/c/{c.token_gestion}/"
+            f"Aquí ves la hora actualizada: {enlace_whatsapp(c, base_url)}"
         )
         resultado.append((c, estimacion.inicio, estimacion.retraso_min, url_whatsapp(c.paciente.celular, texto)))
         if len(resultado) >= limite:
@@ -890,10 +890,25 @@ def _llegada(cita: Cita) -> str:
     return f"Te pedimos llegar {minutos} min antes, a las {hora}, por si acaso." if minutos else ""
 
 
+def firma_whatsapp(cita: Cita) -> str:
+    """Prueba de que el enlace llegó al WhatsApp del paciente: solo viaja en los mensajes que el negocio le envía.
+
+    El `token_gestion` no basta: quien reserva lo recibe en la respuesta, aunque escriba un número ajeno. La firma va
+    atada al token y al celular, así que un enlace reenviado a otro número tampoco verifica una cuenta distinta.
+    """
+    mensaje = f"whatsapp:{cita.token_gestion}:{cita.paciente.celular}".encode()
+    return hmac.new(settings.SECRET_KEY.encode(), mensaje, hashlib.sha256).hexdigest()[:16]
+
+
+def enlace_whatsapp(cita: Cita, base_url: str) -> str:
+    """El enlace de la cita tal como lo manda el negocio por WhatsApp (con la firma que verifica el número)."""
+    return f"{base_url}/c/{cita.token_gestion}/?v={firma_whatsapp(cita)}"
+
+
 def texto_para_paciente(cita: Cita, motivo: str, base_url: str) -> str:
     """El mensaje ya escrito para cada momento. El encargado puede editarlo en WhatsApp antes de enviarlo."""
     tratamiento = cita.servicio_nombre or cita.tratamiento.nombre
-    enlace = f"{base_url}/c/{cita.token_gestion}/"
+    enlace = enlace_whatsapp(cita, base_url)
     indicaciones = _frase(cita.tratamiento.indicaciones)
     if indicaciones:
         indicaciones = " " + indicaciones

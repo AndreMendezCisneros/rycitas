@@ -4,6 +4,7 @@ Reutiliza la disponibilidad y la reserva web: la cita queda «por confirmar» y 
 mueve. El cliente no cancela desde la app: escribe al negocio por WhatsApp.
 """
 
+import hmac
 from datetime import date, datetime
 
 from django.conf import settings
@@ -65,7 +66,10 @@ class ReservaEntrada(Schema):
 
 
 class VincularEntrada(Schema):
+    """El enlace de una cita que el negocio mandó por WhatsApp: `/c/<token>/?v=<firma>`."""
+
     token: str
+    firma: str = ""
 
 
 def _yo(cliente: Cliente) -> dict:
@@ -81,8 +85,12 @@ def _yo(cliente: Cliente) -> dict:
 
 
 def _celular_confiable(cliente: Cliente) -> bool:
-    """Con la verificación apagada se confía en el número escrito (decisión del negocio, por ahora)."""
-    return not settings.VERIFICAR_CLIENTES or cliente.celular_verificado_en is not None
+    """Solo un WhatsApp probado da acceso a citas, sellos y cupones (SEG-01).
+
+    Escribir un número no prueba que sea propio: cualquiera podría registrarse con el celular de otra persona y ver
+    sus citas en todos los negocios. Se prueba abriendo el enlace firmado que el negocio envía a ese WhatsApp.
+    """
+    return cliente.celular_verificado_en is not None
 
 
 # --- Sesión ------------------------------------------------------------------------------------------
@@ -146,10 +154,18 @@ def dispositivo(request, datos: DispositivoEntrada):
 
 @router.post("/vincular")
 def vincular(request, datos: VincularEntrada):
-    """Abrir en la app el enlace de una cita (el que el negocio manda por WhatsApp) prueba que el número es suyo."""
+    """Abrir en la app el enlace de una cita (el que el negocio manda por WhatsApp) prueba que el número es suyo.
+
+    Exige la firma del mensaje de WhatsApp: el token solo no prueba nada, porque quien reserva lo recibe al reservar.
+    """
+    servicios.registrar_intento_ip(ip_cliente(request))
     cita = Cita.objects.select_related("paciente").filter(token_gestion=datos.token).first()
     if cita is None or cita.paciente.celular != request.auth.celular:
         raise ErrorNegocio("enlace_ajeno", "Este enlace es de otro número de WhatsApp.", 409)
+    if not hmac.compare_digest(datos.firma, servicios.firma_whatsapp(cita)):
+        raise ErrorNegocio(
+            "enlace_sin_firma", "Usa el enlace completo que te mandó el negocio por WhatsApp.", 409
+        )
     if request.auth.celular_verificado_en is None:
         request.auth.celular_verificado_en = timezone.now()
         request.auth.save(update_fields=["celular_verificado_en"])
@@ -245,7 +261,7 @@ def negocio(request, slug: str):
         "cupones": [fidelidad.cupon_publico(x) for x in fidelidad.cupones_para(c, cliente.celular)]
         if es_cliente
         else [],
-        "silenciado": request_silenciado(c, cliente.celular),
+        "silenciado": request_silenciado(c, cliente.celular) if es_cliente else False,
     }
 
 
@@ -279,6 +295,8 @@ def reservar(request, slug: str, datos: ReservaEntrada):
         raise ErrorNegocio("motivo_invalido", "Elige un servicio.", 422)
     cupon = None
     if datos.cupon is not None:
+        if not _celular_confiable(cliente):
+            raise ErrorNegocio("cupon_invalido", "Ese cupón ya no está disponible.", 409)
         cupon = next((x for x in fidelidad.cupones_para(c, cliente.celular) if x.pk == datos.cupon), None)
         if cupon is None:
             raise ErrorNegocio("cupon_invalido", "Ese cupón ya no está disponible.", 409)
@@ -317,7 +335,6 @@ def _cita_cliente(cita: Cita) -> dict:
         "id": cita.pk,
         "negocio": {"slug": cita.consultorio.slug, "nombre": cita.consultorio.nombre},
         "enlace": f"/c/{cita.token_gestion}/",
-        "token": cita.token_gestion,
         "cupon": fidelidad.cupon_publico(cupon.cupon) if cupon else None,
     }
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:denticita_doctor/core/api.dart';
 import 'package:denticita_doctor/core/modo.dart';
+import 'package:denticita_doctor/features/cliente/inicio_cliente.dart';
 import 'package:denticita_doctor/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -150,6 +151,14 @@ AlmacenMemoria _conSesionCliente() => AlmacenMemoria()
   ..datos[claveRenovacionCliente] = 'r1';
 
 void main() {
+  test('lee token y firma del enlace de la cita que llega por WhatsApp', () {
+    final e = leerEnlaceDeCita('Mira tu cita: https://sonrisawari.ryjec.com/c/Ab_9-x/?v=0f3a9c ');
+    expect(e?.token, 'Ab_9-x');
+    expect(e?.firma, '0f3a9c');
+    expect(leerEnlaceDeCita('https://sonrisawari.ryjec.com/c/Ab9/')?.firma, '');
+    expect(leerEnlaceDeCita('hola'), isNull);
+  });
+
   setUpAll(() async {
     zonas.initializeTimeZones();
     await initializeDateFormatting('es');

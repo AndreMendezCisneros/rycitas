@@ -37,6 +37,8 @@ $env:PLATAFORMA_DOMINIO = "localhost"
 $env:WHATSAPP_APP_SECRET = "secreto-solo-para-desarrollo"
 $env:WHATSAPP_VERIFY_TOKEN = "token-solo-para-desarrollo"
 $env:MAX_INTENTOS_IP_HORA = "1000"
+# En desarrollo la app del cliente entra sin código por correo (en producción siempre se pide).
+$env:VERIFICAR_CLIENTES = "0"
 
 # Notificaciones push: si guardaste la clave de la cuenta de servicio de Firebase en %LOCALAPPDATA%\denticita\firebase.json
 # (fuera de OneDrive: es un secreto), se usa sola. Sin ella todo funciona igual, solo que sin push. Ver docs/FIREBASE.md.

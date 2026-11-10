@@ -1,8 +1,10 @@
 """Sesión del cliente. Tokens con `tipo="cliente"`: el TokenDoctor los rechaza, así nunca entran a /api/v1.
 
 Registro sin contraseña: correo + nombre + WhatsApp.
-- VERIFICAR_CLIENTES=0 (hoy): se confía en lo escrito. Si el correo ya existe, solo entra con el mismo WhatsApp.
-- VERIFICAR_CLIENTES=1: se manda un código de 6 dígitos al correo y la sesión se entrega al verificarlo.
+- VERIFICAR_CLIENTES=1 (por defecto): se manda un código de 6 dígitos al correo y la sesión se entrega al verificarlo.
+- VERIFICAR_CLIENTES=0 (solo desarrollo): se confía en lo escrito. Si el correo ya existe, solo entra con el mismo
+  WhatsApp.
+En ambos casos el WhatsApp queda sin probar hasta abrir el enlace firmado de una cita (clientes.api.vincular).
 """
 from __future__ import annotations
 

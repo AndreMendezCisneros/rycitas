@@ -8,6 +8,7 @@ from django.core import mail
 from django.test import Client
 
 from citas.models import Cita, Estado
+from citas.servicios import firma_whatsapp
 from clientes.autenticacion import emitir_acceso as acceso_cliente
 from clientes.models import Cliente, DispositivoCliente, Sello
 from consultorios.models import Usuario
@@ -48,7 +49,10 @@ def _registro(cliente, nombre="Rosa Paz", correo="rosa@correo.pe", celular="9876
     )
 
 
-def _cuenta(correo="rosa@correo.pe", celular="+51987654321", nombre="Rosa Paz", **extra) -> Cliente:
+def _cuenta(correo="rosa@correo.pe", celular="+51987654321", nombre="Rosa Paz", verificado=True, **extra) -> Cliente:
+    """Por defecto con el WhatsApp ya probado (abrió el enlace firmado de una de sus citas)."""
+    if verificado:
+        extra.setdefault("celular_verificado_en", AHORA)
     return Cliente.objects.create(nombre=nombre, correo=correo, celular=celular, **extra)
 
 
@@ -285,7 +289,9 @@ def test_con_verificacion_activa_pide_el_codigo_del_correo(cliente, consultorio,
     rosa = Cliente.objects.get()
     app = ApiCliente(rosa)
     assert app.get("/mis-negocios").json()["negocios"] == []
-    assert app.post("/vincular", {"token": reserva["token"]}).json()["celular_verificado"] is True
+    cita = Cita.objects.get(token_gestion=reserva["token"])
+    r = app.post("/vincular", {"token": reserva["token"], "firma": firma_whatsapp(cita)})
+    assert r.json()["celular_verificado"] is True
     assert [n["slug"] for n in app.get("/mis-negocios").json()["negocios"]] == ["sonrisa"]
 
 
@@ -293,3 +299,48 @@ def test_vincular_con_el_enlace_de_otro_numero_falla(cliente, consultorio, limpi
     settings.VERIFICAR_CLIENTES = True
     reserva = reservar(cliente, celular="912345678").json()
     assert ApiCliente(_cuenta()).post("/vincular", {"token": reserva["token"]}).status_code == 409
+
+
+# --- SEG-01: un número escrito no prueba nada ------------------------------------------------------------
+
+
+def test_otro_correo_con_mi_celular_no_ve_mis_citas(cliente, consultorio, otro_consultorio, limpieza, con_sellos):
+    """Quien se registra con el WhatsApp de otra persona no ve sus citas, sellos ni cupones en ningún negocio."""
+    assert reservar(cliente).status_code == 201  # la cita de Rosa, con su número
+    intruso = ApiCliente(_cuenta(correo="intruso@correo.pe", verificado=False))
+    assert intruso.get("/mis-citas").json() == {"proximas": [], "pasadas": []}
+    assert intruso.get("/mis-negocios").json()["negocios"] == []
+    beneficios = intruso.get("/beneficios").json()
+    assert beneficios["tarjetas"] == [] and beneficios["cupones"] == []
+    ficha = intruso.get("/negocios/sonrisa").json()
+    assert ficha["es_cliente"] is False and ficha["tarjeta"] is None and ficha["cupones"] == []
+    assert "token" not in str(intruso.get("/mis-citas").json())
+
+
+def test_vincular_exige_el_enlace_firmado_que_manda_el_negocio(cliente, consultorio, limpieza):
+    """El intruso reserva con el número ajeno y recibe el token: sin la firma del WhatsApp no le sirve."""
+    intruso_cuenta = _cuenta(correo="intruso@correo.pe", verificado=False)
+    intruso = ApiCliente(intruso_cuenta)
+    reserva = intruso.post("/negocios/sonrisa/reservas", {
+        "motivo": "limpieza", "inicio": AHORA.replace(hour=11).isoformat(),
+    }).json()
+    assert intruso.post("/vincular", {"token": reserva["token"]}).status_code == 409
+    assert intruso.post("/vincular", {"token": reserva["token"], "firma": "0" * 16}).status_code == 409
+    intruso_cuenta.refresh_from_db()
+    assert intruso_cuenta.celular_verificado_en is None
+
+    # El enlace que el negocio manda al WhatsApp sí lleva la firma, y es lo único que verifica el número.
+    cita = Cita.objects.get(token_gestion=reserva["token"])
+    from citas.servicios import texto_para_paciente
+    assert f"?v={firma_whatsapp(cita)}" in texto_para_paciente(cita, "confirmada", "https://sonrisa.denticita.test")
+    assert intruso.post("/vincular", {"token": reserva["token"], "firma": firma_whatsapp(cita)}).status_code == 200
+
+
+def test_sin_whatsapp_probado_no_usa_cupones(consultorio, limpieza):
+    from clientes.models import Cupon
+
+    cupon = Cupon.objects.create(consultorio=consultorio, codigo="HOLA", titulo="Hola", descuento_pct=10, vence_el=AHORA.date() + timedelta(days=30))
+    r = ApiCliente(_cuenta(verificado=False)).post("/negocios/sonrisa/reservas", {
+        "motivo": "limpieza", "inicio": AHORA.replace(hour=11).isoformat(), "cupon": cupon.pk,
+    })
+    assert r.status_code == 409 and r.json()["codigo"] == "cupon_invalido"

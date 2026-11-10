@@ -170,9 +170,10 @@ VERIFICACION_WHATSAPP = os.environ.get("VERIFICACION_WHATSAPP", "0") == "1"
 # Adelantos (Yape, Plin, efectivo) con conciliación manual. Desarrollado pero apagado: con 0 no existe ni en la API
 # ni en las pantallas, aunque un negocio lo tenga marcado en sus opciones.
 PAGOS_ADELANTADOS = os.environ.get("PAGOS_ADELANTADOS", "0") == "1"
-# App del cliente («Quiero reservar»): con 1 exige un código por correo al registrarse. Construido pero apagado: por
-# ahora se confía en el WhatsApp que dejó al reservar.
-VERIFICAR_CLIENTES = _bool("VERIFICAR_CLIENTES")
+# App del cliente («Quiero reservar»): con 1 (por defecto) exige un código por correo al registrarse y al entrar. Con 0
+# basta correo + WhatsApp, dos datos que cualquier negocio conoce (SEG-02): solo para desarrollo. Aparte, las citas,
+# sellos y cupones solo se ven tras probar el WhatsApp con el enlace firmado que manda el negocio (SEG-01).
+VERIFICAR_CLIENTES = _bool("VERIFICAR_CLIENTES", True)
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "RyCitas <no-responder@rycitas.pe>")
 if DEBUG and not os.environ.get("EMAIL_HOST"):
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/api.dart';
 import '../../core/modo.dart';
 import '../../shared/comunes.dart';
 import 'datos_cliente.dart';
@@ -126,10 +127,20 @@ class _MisLugares extends ConsumerWidget {
       data: (d) {
         final negocios = lista(d['negocios']);
         if (d['celular_verificado'] == false) {
-          return const AvisoSuave(
-            icono: Icons.verified_user_outlined,
-            texto:
-                'Abre en esta app el enlace de una de tus citas (el que te mandan por WhatsApp) para ver tus lugares.',
+          return Column(
+            children: [
+              const AvisoSuave(
+                icono: Icons.verified_user_outlined,
+                texto: 'Para ver tus citas, sellos y cupones, confirma que este WhatsApp es tuyo: pega el enlace de '
+                    'una de tus citas, el que te mandó el negocio por WhatsApp.',
+              ),
+              FilledButton.tonalIcon(
+                key: const Key('vincular-enlace'),
+                onPressed: () => vincularConEnlace(context, ref),
+                icon: const Icon(Icons.link_rounded),
+                label: const Text('Pegar el enlace de mi cita'),
+              ),
+            ],
           );
         }
         if (negocios.isEmpty) {
@@ -270,5 +281,46 @@ class NavegacionCliente extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Extrae token y firma de un enlace `https://<negocio>/c/<token>/?v=<firma>` pegado desde WhatsApp.
+({String token, String firma})? leerEnlaceDeCita(String texto) {
+  final m = RegExp(r'/c/([A-Za-z0-9_-]+)/?(?:\?v=([0-9a-f]+))?').firstMatch(texto.trim());
+  if (m == null) return null;
+  return (token: m.group(1)!, firma: m.group(2) ?? '');
+}
+
+Future<void> vincularConEnlace(BuildContext context, WidgetRef ref) async {
+  final campo = TextEditingController();
+  final texto = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Enlace de tu cita'),
+      content: TextField(
+        key: const Key('campo-enlace'),
+        controller: campo,
+        autofocus: true,
+        decoration: const InputDecoration(hintText: 'https://…/c/…'),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, campo.text), child: const Text('Confirmar')),
+      ],
+    ),
+  );
+  campo.dispose();
+  if (texto == null || !context.mounted) return;
+  final enlace = leerEnlaceDeCita(texto);
+  if (enlace == null) {
+    avisar(context, 'Ese no parece el enlace de una cita.');
+    return;
+  }
+  try {
+    await ref.read(apiClienteProvider).post('/vincular', {'token': enlace.token, 'firma': enlace.firma});
+    refrescarCliente(ref);
+    if (context.mounted) avisar(context, 'Listo: confirmamos tu WhatsApp.');
+  } on ApiError catch (e) {
+    if (context.mounted) avisar(context, e.mensaje);
   }
 }

@@ -11,7 +11,7 @@
 # para quien no tenga Android), su API, el panel, el admin y la política de privacidad que enlaza la app.
 {$APP_SUBDOMINIO}.{$PLATAFORMA_DOMINIO} {
 	import comun
-	@django path /api/* /cliente/* /panel /panel/* /admin /admin/* /static/* /privacidad /privacidad/* /salud/ /webhooks/*
+	@django path /api/* /cliente/* /panel /panel/* /admin /admin/* /static/* /privacidad /privacidad/* /salud/ /webhooks/* /c/*
 	handle @django {
 		reverse_proxy web:8000
 	}
