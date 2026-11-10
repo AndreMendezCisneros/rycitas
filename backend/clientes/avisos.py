@@ -27,7 +27,7 @@ def enviar(celulares: list[str], titulo: str, cuerpo: str, datos: dict, consulto
     from mensajeria.push import _sesion_fcm
 
     if not settings.FIREBASE_PROJECT_ID or not settings.FIREBASE_CREDENCIALES:
-        log.info("push al cliente omitido (Firebase sin configurar): %s", titulo)
+        log.info("push al cliente omitido (Firebase sin configurar)")
         return 0
     dispositivos = DispositivoCliente.objects.filter(cliente__celular__in=celulares, cliente__activo=True)
     if consultorio_id is not None:  # quien silenció al negocio no recibe sus campañas

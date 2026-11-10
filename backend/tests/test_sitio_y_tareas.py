@@ -317,3 +317,19 @@ def test_el_paciente_anonimizado_puede_volver_a_reservar(cliente, limpieza):
     assert reservar(cliente, inicio=AHORA.replace(hour=12)).status_code == 201
     assert Paciente.objects.count() == 2
 
+
+
+def test_sentry_no_recibe_datos_personales():
+    """SEG-14/DAT-08: ni el cuerpo (nombre, celular), ni cookies, ni el token de gestión de la URL."""
+    from denticita.errores import sin_datos_personales
+
+    evento = {
+        "request": {
+            "url": "https://sonrisa.ryjec.com/c/AbC123token/?v=1", "data": {"nombre": "Rosa", "celular": "+51987"},
+            "cookies": {"sessionid": "x"}, "headers": {"Authorization": "Bearer y"}, "query_string": "v=1",
+        },
+        "user": {"ip_address": "200.1.1.1"},
+    }
+    limpio = sin_datos_personales(evento, {})
+    assert limpio["request"] == {"url": "https://sonrisa.ryjec.com/c/***/"}
+    assert "user" not in limpio

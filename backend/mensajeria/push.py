@@ -107,7 +107,7 @@ def enviar_a_consultorio(
         return 0  # ya salió en un intento anterior
 
     if not settings.FIREBASE_PROJECT_ID or not settings.FIREBASE_CREDENCIALES:
-        log.info("push omitido (Firebase sin configurar): %s", titulo)
+        log.info("push omitido (Firebase sin configurar)")
         if aviso is not None:
             aviso.enviado_en, aviso.error = timezone.now(), "Firebase sin configurar"
             aviso.save(update_fields=["enviado_en", "error"])

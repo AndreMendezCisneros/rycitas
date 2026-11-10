@@ -14,6 +14,8 @@ x-backend: &backend
   # Etiqueta por versión (desplegar.sh la fija con la fecha): las anteriores quedan para ./rollback.sh.
   image: rycitas-web:${VERSION:-actual}
   env_file: .env
+  environment:
+    VERSION: ${VERSION:-actual}  # release en Sentry
   restart: unless-stopped
   depends_on:
     db:

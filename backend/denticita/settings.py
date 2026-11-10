@@ -207,8 +207,20 @@ SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
 if SENTRY_DSN:
     import sentry_sdk
 
-    # send_default_pii=False: nombres y celulares no salen hacia el servicio de errores (RNF-09).
-    sentry_sdk.init(dsn=SENTRY_DSN, send_default_pii=False, traces_sample_rate=0)
+    from denticita.errores import sin_datos_personales
+
+    # Nombres y celulares no salen hacia el servicio de errores (RNF-09, SEG-14): sin PII por defecto, sin variables
+    # locales (llevarían la cita o el paciente), sin el cuerpo de la petición y con un filtro final.
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        send_default_pii=False,
+        include_local_variables=False,
+        max_request_body_size="never",
+        before_send=sin_datos_personales,
+        environment=os.environ.get("SENTRY_ENTORNO", "produccion"),
+        release=os.environ.get("VERSION") or None,
+        traces_sample_rate=0,
+    )
 
 # RNF-15: logs estructurados, una línea JSON por evento.
 LOGGING = {
