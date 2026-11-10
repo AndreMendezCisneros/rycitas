@@ -75,7 +75,8 @@ def lista(request):
     q = request.GET.get("q", "").strip()
     filtro = request.GET.get("estado", "")
     negocios_qs = Consultorio.objects.annotate(
-        citas_30=Count("citas", filter=Q(citas__creado_en__gte=timezone.now() - timedelta(days=30))),
+        # distinct: con dos Count sobre relaciones distintas, el JOIN multiplicaba las citas por las cuentas (BD-01).
+        citas_30=Count("citas", filter=Q(citas__creado_en__gte=timezone.now() - timedelta(days=30)), distinct=True),
         cuentas=Count("usuarios", distinct=True),
     ).order_by("nombre")
     if q:

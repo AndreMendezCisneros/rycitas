@@ -254,3 +254,13 @@ def test_csv_neutraliza_formulas(panel, consultorio, limpieza, cliente):
     assert ",+51987654321," in contenido  # el celular no se toca
     citas = panel.get(f"/panel/n/{consultorio.pk}/exportar/citas.csv").content.decode("utf-8-sig")
     assert "'=HYPERLINK" in citas
+
+
+def test_el_conteo_de_citas_no_se_multiplica_por_las_cuentas(panel, consultorio, limpieza, cliente, doctor):
+    """BD-01: un negocio con 3 cuentas y 1 cita mostraba «3 citas en 30 días»."""
+    for i in range(2):
+        Usuario.objects.create_user(f"extra{i}@sonrisa.test", "clave-segura-123", consultorio=consultorio)
+    assert reservar(cliente).status_code == 201
+    r = panel.get("/panel/")
+    fila = next(f for f in r.context["filas"] if f["c"].pk == consultorio.pk)
+    assert fila["c"].citas_30 == 1 and fila["c"].cuentas == 3
