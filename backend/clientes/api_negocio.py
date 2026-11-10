@@ -14,6 +14,7 @@ from citas.models import Paciente
 from citas.servicios import a_centimos
 from clientes import fidelidad
 from clientes.models import Campana, Canje, Cliente, Cupon, CuponUsado, Sello, Segmento
+from consultorios.permisos import solo_general
 from denticita.errores import ErrorNegocio
 
 router = Router(tags=["fidelización"])
@@ -21,9 +22,7 @@ router = Router(tags=["fidelización"])
 MAX_CAMPANAS_SEMANA = 2
 
 
-def _solo_general(request) -> None:
-    if request.auth.profesional_id:
-        raise ErrorNegocio("solo_general", "Solo la cuenta general del negocio puede hacer esto.", 403)
+_solo_general = solo_general
 
 
 class FidelidadEntrada(Schema):

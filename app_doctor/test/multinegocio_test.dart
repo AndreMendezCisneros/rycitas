@@ -106,7 +106,7 @@ void main() {
   testWidgets('una barbería habla de clientes y servicios', (t) async {
     final red = RedFalsa({
       'POST /auth/refresh': (_) => ok(tokens),
-      'GET /negocio': (_) => ok(negocioJson()),
+      'GET /negocio': (_) => ok(negocioJson(miProfesional: null)),
       'GET /agenda': (_) => ok(hoy),
     });
     await abrir(t, red, conSesion());
@@ -137,7 +137,11 @@ void main() {
     await t.tap(find.text('Ajustes'));
     await t.pumpAndSettle();
     expect(find.text('Solo tu agenda (Juan)'), findsOneWidget);
-    expect(find.text('Turnos de la agenda'), findsNothing); // la configuración es de la cuenta general
+    // La configuración del negocio es de la cuenta general (SEG-03); los bloqueos propios sí los maneja.
+    expect(find.text('Turnos de la agenda'), findsNothing);
+    expect(find.text('Horario de atención'), findsNothing);
+    expect(find.text('Servicios'), findsNothing);
+    expect(find.text('Bloqueos'), findsOneWidget);
   });
 
   testWidgets('la cuenta general ve con quién es cada cita y filtra por profesional', (t) async {

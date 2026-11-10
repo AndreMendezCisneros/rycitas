@@ -4,6 +4,7 @@ from datetime import datetime, time
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import Router, Schema
@@ -14,6 +15,7 @@ from citas.models import ESTADOS_ACTIVOS, Cita, Estado
 from agenda.motor import LIMA
 from citas import servicios
 from citas.presentacion import base_url_consultorio, cita_doctor, iso
+from consultorios.permisos import solo_general
 from denticita.errores import ErrorNegocio
 
 router = Router(tags=["configuración"])
@@ -85,6 +87,7 @@ def impacto_horario(request, datos: HorarioEntrada):
 
     Nada se cancela solo: el encargado decide si mueve cada cita o la atiende igual.
     """
+    solo_general(request, "Solo la cuenta general del negocio puede cambiar el horario.")
     _validar_tramos(datos)
     consultorio = request.auth.consultorio
     con_horario_propio = HorarioSemanal.objects.filter(consultorio=consultorio, profesional__isnull=False).values(
@@ -113,6 +116,7 @@ def guardar_horario(request, datos: HorarioEntrada):
 
     Los horarios propios de cada profesional se editan en el panel y aquí no se tocan.
     """
+    solo_general(request, "Solo la cuenta general del negocio puede cambiar el horario.")
     consultorio = request.auth.consultorio
     _validar_tramos(datos)
     with transaction.atomic():
@@ -131,12 +135,21 @@ def _bloqueo(b: Bloqueo) -> dict:
     return {"id": b.pk, "inicio": iso(b.inicio), "fin": iso(b.fin), "motivo": b.motivo}
 
 
-def _citas_afectadas(consultorio, inicio: datetime, fin: datetime):
-    return (
-        Cita.objects.filter(consultorio=consultorio, estado__in=ESTADOS_ACTIVOS, inicio__lt=fin, fin_ocupado__gt=inicio)
+def _citas_afectadas(request, inicio: datetime, fin: datetime):
+    """La cuenta de un profesional solo bloquea su agenda: solo ve sus propias citas afectadas."""
+    citas = (
+        Cita.objects.filter(
+            consultorio=request.auth.consultorio, estado__in=ESTADOS_ACTIVOS, inicio__lt=fin, fin_ocupado__gt=inicio
+        )
         .exclude(estado=Estado.PENDIENTE)
         .select_related("paciente", "tratamiento")
     )
+    if request.auth.profesional_id:
+        citas = citas.filter(profesional_id=request.auth.profesional_id)
+    return citas
+
+
+MAX_DIAS_BLOQUEO = 366
 
 
 def _validar_rango(inicio: datetime, fin: datetime) -> None:
@@ -144,32 +157,51 @@ def _validar_rango(inicio: datetime, fin: datetime) -> None:
         raise ErrorNegocio("hora_invalida", "La hora debe incluir zona horaria.", 422)
     if inicio >= fin:
         raise ErrorNegocio("rango_invalido", "El bloqueo debe terminar después de empezar.", 422)
+    if (fin - inicio).days > MAX_DIAS_BLOQUEO:
+        raise ErrorNegocio("rango_invalido", "Un bloqueo puede durar como máximo un año.", 422)
+
+
+def _bloqueos_de(request):
+    """La cuenta general maneja todos; la de un profesional, solo los suyos (y ve los del negocio entero)."""
+    bloqueos = Bloqueo.objects.filter(consultorio=request.auth.consultorio)
+    if request.auth.profesional_id:
+        bloqueos = bloqueos.filter(Q(profesional__isnull=True) | Q(profesional_id=request.auth.profesional_id))
+    return bloqueos
 
 
 @router.get("/bloqueos")
 def listar_bloqueos(request):
-    return {"bloqueos": [_bloqueo(b) for b in Bloqueo.objects.filter(consultorio=request.auth.consultorio)]}
+    return {"bloqueos": [_bloqueo(b) for b in _bloqueos_de(request)]}
 
 
 @router.get("/bloqueos/impacto")
 def impacto_bloqueo(request, inicio: datetime, fin: datetime):
     """Citas que quedarían dentro del bloqueo: la app las lista antes de confirmar (RF-26)."""
     _validar_rango(inicio, fin)
-    return {"citas": [cita_doctor(c) for c in _citas_afectadas(request.auth.consultorio, inicio, fin)]}
+    return {"citas": [cita_doctor(c) for c in _citas_afectadas(request, inicio, fin)]}
 
 
 @router.post("/bloqueos", response={201: dict})
 def crear_bloqueo(request, datos: BloqueoEntrada):
+    """La cuenta general cierra todo el negocio; la de un profesional, solo su propia agenda (SEG-03)."""
     _validar_rango(datos.inicio, datos.fin)
     bloqueo = Bloqueo.objects.create(
-        consultorio=request.auth.consultorio, inicio=datos.inicio, fin=datos.fin, motivo=datos.motivo[:120]
+        consultorio=request.auth.consultorio,
+        profesional_id=request.auth.profesional_id,
+        inicio=datos.inicio,
+        fin=datos.fin,
+        motivo=datos.motivo[:120],
     )
     return 201, _bloqueo(bloqueo)
 
 
 @router.delete("/bloqueos/{bloqueo_id}", response={204: None})
 def borrar_bloqueo(request, bloqueo_id: int):
-    get_object_or_404(Bloqueo, consultorio=request.auth.consultorio, pk=bloqueo_id).delete()
+    """Un profesional no borra el cierre del negocio entero: solo sus propios bloqueos."""
+    bloqueos = Bloqueo.objects.filter(consultorio=request.auth.consultorio)
+    if request.auth.profesional_id:
+        bloqueos = bloqueos.filter(profesional_id=request.auth.profesional_id)
+    get_object_or_404(bloqueos, pk=bloqueo_id).delete()
     return 204, None
 
 
@@ -228,6 +260,7 @@ def listar_tratamientos(request):
 
 @router.post("/tratamientos", response={201: dict})
 def crear_tratamiento(request, datos: TratamientoEntrada):
+    solo_general(request, "Solo la cuenta general del negocio puede cambiar los servicios.")
     _validar_tratamiento(datos)
     t = Tratamiento.objects.create(consultorio=request.auth.consultorio, **datos.dict())
     return 201, _tratamiento(t)
@@ -235,6 +268,7 @@ def crear_tratamiento(request, datos: TratamientoEntrada):
 
 @router.put("/tratamientos/{tratamiento_id}")
 def editar_tratamiento(request, tratamiento_id: int, datos: TratamientoEntrada):
+    solo_general(request, "Solo la cuenta general del negocio puede cambiar los servicios.")
     _validar_tratamiento(datos)
     t = get_object_or_404(Tratamiento, consultorio=request.auth.consultorio, pk=tratamiento_id)
     for campo, valor in datos.dict().items():
@@ -246,6 +280,7 @@ def editar_tratamiento(request, tratamiento_id: int, datos: TratamientoEntrada):
 @router.delete("/tratamientos/{tratamiento_id}", response={204: None})
 def borrar_tratamiento(request, tratamiento_id: int):
     """Con citas registradas solo se oculta: el historial debe seguir mostrando el tratamiento."""
+    solo_general(request, "Solo la cuenta general del negocio puede cambiar los servicios.")
     t = get_object_or_404(Tratamiento, consultorio=request.auth.consultorio, pk=tratamiento_id)
     if t.citas.exists():
         t.reservable = False

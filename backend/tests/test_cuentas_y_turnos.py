@@ -181,3 +181,67 @@ def test_el_panel_cuenta_las_citas_por_venir_del_mes(cliente, consultorio, limpi
     assert r.status_code == 200
     assert r.context["kpis"]["citas"] == 1
     assert r.context["proximas"] == 1
+
+
+# --- SEG-03: la cuenta de un profesional no configura el negocio -----------------------------------------
+
+
+def _rutas_de_configuracion(corte):
+    tramos = {"tramos": [{"dia_semana": 0, "hora_inicio": "08:00", "hora_fin": "09:00"}]}
+    servicio = {"nombre": "Afeitado", "duracion_min": 20}
+    return [
+        ("post", "/horario/impacto", tramos),
+        ("put", "/horario", tramos),
+        ("post", "/tratamientos", servicio),
+        ("put", f"/tratamientos/{corte.pk}", servicio),
+        ("delete", f"/tratamientos/{corte.pk}", None),
+        ("put", "/turnos", {"turnos": []}),
+        ("put", "/fidelidad", {"activa": True, "meta": 5, "premio": "Corte gratis"}),
+        ("post", "/cupones", {"codigo": "X1", "titulo": "X", "descuento_pct": 10, "vence_el": "2026-12-31"}),
+        ("post", "/campanas", {"titulo": "Hola", "mensaje": "Hola"}),
+    ]
+
+
+@pytest.mark.parametrize("indice", range(9))
+def test_profesional_no_cambia_configuracion_del_negocio(barberia, corte, de_pedro, indice):
+    metodo, ruta, datos = _rutas_de_configuracion(corte)[indice]
+    antes = (
+        list(HorarioSemanal.objects.filter(consultorio=barberia).values_list("dia_semana", "hora_inicio", "hora_fin")),
+        list(Tratamiento.objects.filter(consultorio=barberia).values_list("nombre", "visible", "reservable")),
+    )
+    r = getattr(de_pedro, metodo)(ruta, datos) if datos is not None else getattr(de_pedro, metodo)(ruta)
+    assert r.status_code == 403, (ruta, r.content)
+    assert r.json()["codigo"] == "solo_general"
+    despues = (
+        list(HorarioSemanal.objects.filter(consultorio=barberia).values_list("dia_semana", "hora_inicio", "hora_fin")),
+        list(Tratamiento.objects.filter(consultorio=barberia).values_list("nombre", "visible", "reservable")),
+    )
+    assert antes == despues
+
+
+def test_el_bloqueo_de_un_profesional_solo_cierra_su_agenda(barberia, juan_pedro, de_pedro, general):
+    from agenda.models import Bloqueo
+
+    rango = {"inicio": AHORA.replace(hour=9).isoformat(), "fin": AHORA.replace(hour=12).isoformat()}
+    r = de_pedro.post("/bloqueos", rango)
+    assert r.status_code == 201
+    assert Bloqueo.objects.get(pk=r.json()["id"]).profesional == juan_pedro[1]
+
+    # El cierre del negocio entero lo pone la cuenta general, y el profesional no lo puede quitar.
+    del_negocio = general.post("/bloqueos", rango).json()["id"]
+    assert Bloqueo.objects.get(pk=del_negocio).profesional is None
+    assert de_pedro.delete(f"/bloqueos/{del_negocio}").status_code == 404
+    assert Bloqueo.objects.filter(pk=del_negocio).exists()
+    assert de_pedro.delete(f"/bloqueos/{r.json()['id']}").status_code == 204
+
+
+def test_el_impacto_de_un_bloqueo_de_profesional_solo_trae_sus_citas(cliente, corte, juan_pedro, de_pedro):
+    _cita_de_juan(cliente, corte, juan_pedro[0])
+    r = de_pedro.get("/bloqueos/impacto", inicio=AHORA.replace(hour=8).isoformat(),
+                     fin=AHORA.replace(hour=19).isoformat())
+    assert r.status_code == 200 and r.json()["citas"] == []
+
+
+def test_un_bloqueo_no_dura_mas_de_un_anio(general):
+    r = general.post("/bloqueos", {"inicio": AHORA.isoformat(), "fin": (AHORA + timedelta(days=400)).isoformat()})
+    assert r.status_code == 422

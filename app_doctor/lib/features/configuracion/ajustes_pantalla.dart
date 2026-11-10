@@ -62,12 +62,15 @@ class AjustesPantalla extends ConsumerWidget {
                 detalle: 'Confirmaciones, inasistencias, ocupación',
                 alTocar: () => context.push('/mi-mes'),
               ),
-              _Opcion(
-                icono: Icons.schedule_rounded,
-                color: const Color(0xFF0EA5E9),
-                titulo: 'Horario de atención',
-                alTocar: () => context.push('/ajustes/horario'),
-              ),
+              // Horario y servicios son del negocio entero: solo la cuenta general los cambia (el servidor también
+              // lo exige). Cada profesional maneja sus propios bloqueos.
+              if (negocio.esGeneral)
+                _Opcion(
+                  icono: Icons.schedule_rounded,
+                  color: const Color(0xFF0EA5E9),
+                  titulo: 'Horario de atención',
+                  alTocar: () => context.push('/ajustes/horario'),
+                ),
               if (negocio.esGeneral)
                 _Opcion(
                   icono: Icons.view_agenda_rounded,
@@ -83,12 +86,13 @@ class AjustesPantalla extends ConsumerWidget {
                 detalle: 'Vacaciones, congresos, imprevistos',
                 alTocar: () => context.push('/ajustes/bloqueos'),
               ),
-              _Opcion(
-                icono: Icons.spa_rounded,
-                color: const Color(0xFF14B8A6),
-                titulo: Vocabulario.may(ref.watch(vocProvider).servicios),
-                alTocar: () => context.push('/ajustes/tratamientos'),
-              ),
+              if (negocio.esGeneral)
+                _Opcion(
+                  icono: Icons.spa_rounded,
+                  color: const Color(0xFF14B8A6),
+                  titulo: Vocabulario.may(ref.watch(vocProvider).servicios),
+                  alTocar: () => context.push('/ajustes/tratamientos'),
+                ),
             ],
           ),
           TituloGrupo('${Vocabulario.may(ref.watch(vocProvider).clientes)} que vuelven'),
