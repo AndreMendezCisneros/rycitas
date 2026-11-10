@@ -243,3 +243,14 @@ def test_un_login_correcto_reinicia_el_contador(staff):
 def test_salir_cierra_la_sesion(panel):
     assert panel.post("/panel/salir/").status_code == 302
     assert panel.get("/panel/").status_code == 302
+
+
+def test_csv_neutraliza_formulas(panel, consultorio, limpieza, cliente):
+    """SEG-09: lo que un visitante escribe al reservar no se ejecuta como fórmula en el Excel del negocio."""
+    assert reservar(cliente, nombre="=HYPERLINK(\"http://x\")").status_code == 201
+    contenido = panel.get(f"/panel/n/{consultorio.pk}/exportar/clientes.csv").content.decode("utf-8-sig")
+    assert "'=HYPERLINK" in contenido
+    assert "\n=HYPERLINK" not in contenido and ",=HYPERLINK" not in contenido
+    assert ",+51987654321," in contenido  # el celular no se toca
+    citas = panel.get(f"/panel/n/{consultorio.pk}/exportar/citas.csv").content.decode("utf-8-sig")
+    assert "'=HYPERLINK" in citas

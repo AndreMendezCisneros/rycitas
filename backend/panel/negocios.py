@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 import secrets
 from datetime import time
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Count
 from django.utils import timezone
 
 from agenda.models import HorarioSemanal, Tratamiento
@@ -159,10 +161,31 @@ def dias_para_vencer(consultorio: Consultorio) -> int | None:
     return (consultorio.servicio_hasta - timezone.localdate()).days
 
 
+_INICIO_FORMULA = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _celda(valor):
+    """Neutraliza fórmulas (SEG-09): un nombre como «=HYPERLINK(...)» escrito al reservar no se ejecuta en Excel.
+
+    Un celular («+51987654321») sí empieza con «+», pero es solo dígitos: no hace falta tocarlo.
+    """
+    if isinstance(valor, str) and valor.startswith(_INICIO_FORMULA) and not re.fullmatch(r"\+\d+", valor):
+        return "'" + valor
+    return valor
+
+
+class _Escritor:
+    def __init__(self, salida):
+        self._csv = csv.writer(salida)
+
+    def writerow(self, fila):
+        self._csv.writerow([_celda(v) for v in fila])
+
+
 def exportar_citas(consultorio: Consultorio) -> str:
     """CSV para entregar al negocio si deja el servicio (DEC-005): nunca se borran sus datos por vencimiento."""
     salida = io.StringIO()
-    escritor = csv.writer(salida)
+    escritor = _Escritor(salida)
     escritor.writerow(
         ["inicio", "fin", "estado", "servicio", "profesional", "cliente", "celular", "precio_referencia",
          "precio_acordado", "origen", "creada"]
@@ -187,10 +210,11 @@ def exportar_citas(consultorio: Consultorio) -> str:
 
 def exportar_clientes(consultorio: Consultorio) -> str:
     salida = io.StringIO()
-    escritor = csv.writer(salida)
+    escritor = _Escritor(salida)
     escritor.writerow(["nombre", "celular", "citas", "inasistencias", "bloqueado"])
-    for p in Paciente.objects.filter(consultorio=consultorio).order_by("nombre"):
-        escritor.writerow([p.nombre, p.celular, p.citas.count(), p.inasistencias, "sí" if p.bloqueado else "no"])
+    pacientes = Paciente.objects.filter(consultorio=consultorio).annotate(total_citas=Count("citas")).order_by("nombre")
+    for p in pacientes:  # el conteo en la misma consulta, no uno por paciente (BD-09)
+        escritor.writerow([p.nombre, p.celular, p.total_citas, p.inasistencias, "sí" if p.bloqueado else "no"])
     return salida.getvalue()
 
 
