@@ -212,9 +212,19 @@ def desactivar_cupon(request, cupon_id: int):
 
 
 def _destinatarios(consultorio, segmento: str):
-    pacientes = list(fidelidad.del_segmento(consultorio, segmento).only("nombre", "celular"))
+    """Solo quien dio su permiso aparte para recibir promociones (DAT-02), al reservar o en la app."""
+    pacientes = list(fidelidad.del_segmento(consultorio, segmento).only("nombre", "celular", "acepta_publicidad_en"))
     silenciados = set(consultorio.clientes_silenciados.values_list("celular", flat=True))
-    pacientes = [p for p in pacientes if p.celular not in silenciados]
+    con_permiso_en_app = set(
+        Cliente.objects.filter(
+            celular__in=[p.celular for p in pacientes], activo=True, acepta_publicidad_en__isnull=False
+        ).values_list("celular", flat=True)
+    )
+    pacientes = [
+        p
+        for p in pacientes
+        if p.celular not in silenciados and (p.acepta_publicidad_en is not None or p.celular in con_permiso_en_app)
+    ]
     con_app = set(
         Cliente.objects.filter(celular__in=[p.celular for p in pacientes], activo=True, dispositivos__isnull=False)
         .values_list("celular", flat=True)

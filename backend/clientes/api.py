@@ -37,6 +37,7 @@ class RegistroEntrada(Schema):
     celular: str
     referido: str = ""
     acepta_politica: bool = False
+    acepta_publicidad: bool = False  # aparte y opcional (DAT-02)
 
 
 class CodigoEntrada(Schema):
@@ -51,6 +52,7 @@ class TokenEntrada(Schema):
 
 class PerfilEntrada(Schema):
     nombre: str
+    acepta_publicidad: bool | None = None  # None: no lo cambia
 
 
 class DispositivoEntrada(Schema):
@@ -81,6 +83,7 @@ def _yo(cliente: Cliente) -> dict:
         "invitados": cliente.referidos.count(),
         "celular_verificado": _celular_confiable(cliente),
         "verificacion_activa": settings.VERIFICAR_CLIENTES,
+        "acepta_publicidad": cliente.acepta_publicidad_en is not None,
     }
 
 
@@ -101,7 +104,9 @@ def registro(request, datos: RegistroEntrada):
     if not datos.acepta_politica:
         raise ErrorNegocio("sin_consentimiento", "Debes aceptar la política de datos para continuar.", 422)
     servicios.registrar_intento_ip(ip_cliente(request))
-    resultado = autenticacion.registrar(datos.nombre, datos.correo, datos.celular, datos.referido)
+    resultado = autenticacion.registrar(
+        datos.nombre, datos.correo, datos.celular, datos.referido, acepta_publicidad=datos.acepta_publicidad
+    )
     if "sesion" in resultado:
         cliente = Cliente.objects.get(correo=datos.correo.strip().lower())
         return {**resultado["sesion"], "nuevo": resultado["nuevo"], "cliente": _yo(cliente)}
@@ -140,7 +145,11 @@ def editar_yo(request, datos: PerfilEntrada):
     if len(nombre) < 2:
         raise ErrorNegocio("nombre_invalido", "Escribe tu nombre.", 422)
     request.auth.nombre = nombre[:120]
-    request.auth.save(update_fields=["nombre"])
+    campos = ["nombre"]
+    if datos.acepta_publicidad is not None:
+        request.auth.acepta_publicidad_en = timezone.now() if datos.acepta_publicidad else None
+        campos.append("acepta_publicidad_en")
+    request.auth.save(update_fields=campos)
     return _yo(request.auth)
 
 

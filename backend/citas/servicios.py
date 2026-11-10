@@ -380,8 +380,13 @@ def crear_prerreserva(
     *,
     profesional_id: int | None = None,
     precio_ofrecido: float | None = None,
+    acepta_publicidad: bool = False,
 ) -> Cita:
-    """Retiene el horario 15 min (RF-08). Si dos llegan a la vez, la restricción de la base elige a una."""
+    """Retiene el horario 15 min (RF-08). Si dos llegan a la vez, la restricción de la base elige a una.
+
+    `acepta_publicidad` es un permiso aparte y opcional (DAT-02): marcarlo una vez basta; no marcarlo en otra reserva
+    no lo retira (eso se pide al negocio o desde la app).
+    """
     if not acepta_politica:
         raise ErrorNegocio("sin_consentimiento", "Debes aceptar la política de datos para reservar.", 422)
     nombre = _validar_nombre(nombre)
@@ -414,7 +419,12 @@ def crear_prerreserva(
                 409,
             )
         paciente.consentimiento_en = ahora
-        paciente.save(update_fields=["consentimiento_en"])
+        paciente.politica_version = settings.POLITICA_VERSION
+        campos = ["consentimiento_en", "politica_version"]
+        if acepta_publicidad and paciente.acepta_publicidad_en is None:
+            paciente.acepta_publicidad_en = ahora
+            campos.append("acepta_publicidad_en")
+        paciente.save(update_fields=campos)
         profesional = _elegir_profesional(consultorio, tratamiento, inicio, candidatos)
         params = parametros_de(consultorio, tratamiento)
         fin = inicio + timedelta(minutes=params.duracion_min)

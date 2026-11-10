@@ -13,6 +13,12 @@ class Paciente(models.Model):
     celular = models.CharField(max_length=40, help_text="Formato E.164: +51987654321")
     verificado_en = models.DateTimeField(null=True, blank=True)
     consentimiento_en = models.DateTimeField(null=True, blank=True)
+    politica_version = models.CharField(
+        max_length=20, blank=True, help_text="Versión de la política de datos que aceptó (settings.POLITICA_VERSION)."
+    )
+    acepta_publicidad_en = models.DateTimeField(
+        null=True, blank=True, help_text="Consentimiento aparte para recibir promociones. Vacío: no se le envían."
+    )
     inasistencias = models.PositiveIntegerField(default=0)
     bloqueado = models.BooleanField(default=False)
     creado_en = models.DateTimeField(auto_now_add=True)

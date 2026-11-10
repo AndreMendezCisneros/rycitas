@@ -31,6 +31,7 @@ class SesionCliente extends Notifier<EstadoSesion> {
     required String correo,
     required String celular,
     String referido = '',
+    bool aceptaPublicidad = false,
   }) async {
     final api = ref.read(apiClienteProvider);
     final datos = await api.post('/auth/registro', {
@@ -39,6 +40,7 @@ class SesionCliente extends Notifier<EstadoSesion> {
       'celular': celular.trim(),
       'referido': referido.trim(),
       'acepta_politica': true,
+      'acepta_publicidad': aceptaPublicidad,
     });
     if (datos['verificar'] == true) return ResultadoRegistro.faltaCodigo;
     await api.guardarTokens(datos);

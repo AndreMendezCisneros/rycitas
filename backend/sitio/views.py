@@ -211,6 +211,13 @@ def privacidad(request):
         "consultorio": consultorio,
         "voc": consultorio.vocabulario if consultorio else rubro("otro")["vocabulario"],
         "salud": consultorio.tipo["salud"] if consultorio else False,
+        "version": settings.POLITICA_VERSION,
+        "titular": {
+            "nombre": settings.TITULAR_NOMBRE,
+            "documento": settings.TITULAR_DOCUMENTO,
+            "domicilio": settings.TITULAR_DOMICILIO,
+            "correo": settings.TITULAR_CORREO,
+        },
     }
     return _cacheable(render(request, "sitio/privacidad.html", contexto))
 

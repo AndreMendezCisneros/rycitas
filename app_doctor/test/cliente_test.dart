@@ -181,6 +181,7 @@ void main() {
     await t.enterText(find.byKey(const Key('cliente-correo')), 'rosa@correo.pe');
     await t.enterText(find.byKey(const Key('cliente-celular')), '987654321');
     await t.ensureVisible(find.byKey(const Key('cliente-entrar')));
+    await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('cliente-entrar')));
     await t.pumpAndSettle();
     expect(find.textContaining('Acepta la política'), findsOneWidget); // sin aceptar no envía
@@ -190,6 +191,7 @@ void main() {
     await t.tap(find.byKey(const Key('cliente-acepta')));
     await t.pump();
     await t.ensureVisible(find.byKey(const Key('cliente-entrar')));
+    await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('cliente-entrar')));
     await t.pumpAndSettle();
     expect(red.llamadas, contains('POST /auth/registro'));

@@ -156,6 +156,14 @@ PANEL_MAX_INTENTOS_IP_HORA = int(os.environ.get("PANEL_MAX_INTENTOS_IP_HORA", "2
 # Mensajes del panel (incluyen claves generadas) en la sesión del servidor, no en una cookie legible (SEG-19).
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 
+# Política de datos (sitio/templates/sitio/privacidad.html). Cambiar la versión al cambiar el texto: cada
+# consentimiento guarda la versión que se aceptó (Ley 29733). El titular aparece en la política.
+POLITICA_VERSION = "2026-11-10"
+TITULAR_NOMBRE = os.environ.get("TITULAR_NOMBRE", "")
+TITULAR_DOCUMENTO = os.environ.get("TITULAR_DOCUMENTO", "")  # RUC o DNI
+TITULAR_DOMICILIO = os.environ.get("TITULAR_DOMICILIO", "")
+TITULAR_CORREO = os.environ.get("TITULAR_CORREO", "")  # canal para los derechos ARCO
+
 # Reserva.
 MINUTOS_PRERRESERVA = 15
 MAX_CITAS_FUTURAS_POR_NUMERO = 2

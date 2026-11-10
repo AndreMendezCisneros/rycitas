@@ -247,7 +247,10 @@ def test_la_cuenta_de_profesional_no_crea_cupones_ni_campanas(consultorio, limpi
 def test_campana_push_a_quien_tiene_app_y_whatsapp_al_resto(con_sellos, limpieza, api, reloj):
     _cita_terminada(api, limpieza, reloj, hora=9)
     _cita_terminada(api, limpieza, reloj, hora=10, celular="912345678")
-    rosa = _cuenta()
+    _cita_terminada(api, limpieza, reloj, hora=11, celular="955555555")  # sin permiso para promociones
+    from citas.models import Paciente
+    Paciente.objects.filter(celular="+51912345678").update(acepta_publicidad_en=AHORA)  # lo marcó al reservar
+    rosa = _cuenta(acepta_publicidad_en=AHORA)  # lo marcó en la app
     DispositivoCliente.objects.create(cliente=rosa, token_fcm="tok-rosa")
     assert api.get("/campanas/previa", segmento="todos").json() == {"destinatarios": 2, "con_app": 1}
     with mock.patch("django_q.tasks.async_task") as tarea:
@@ -344,3 +347,40 @@ def test_sin_whatsapp_probado_no_usa_cupones(consultorio, limpieza):
         "motivo": "limpieza", "inicio": AHORA.replace(hour=11).isoformat(), "cupon": cupon.pk,
     })
     assert r.status_code == 409 and r.json()["codigo"] == "cupon_invalido"
+
+
+# --- DAT-02: promociones solo con un permiso aparte ------------------------------------------------------
+
+
+def test_la_reserva_web_guarda_la_version_de_la_politica_y_el_permiso_de_promociones(cliente, consultorio, limpieza):
+    from citas.models import Paciente
+
+    assert reservar(cliente, inicio=AHORA.replace(hour=10), acepta_publicidad=False).status_code == 201
+    paciente = Paciente.objects.get()
+    assert paciente.politica_version == settings_politica() and paciente.acepta_publicidad_en is None
+    assert reservar(cliente, inicio=AHORA.replace(hour=11), acepta_publicidad=True).status_code == 201
+    paciente.refresh_from_db()
+    assert paciente.acepta_publicidad_en is not None
+
+
+def settings_politica():
+    from django.conf import settings
+
+    return settings.POLITICA_VERSION
+
+
+def test_el_cliente_da_y_retira_el_permiso_de_promociones(cliente):
+    r = _registro(cliente, acepta_publicidad=True)
+    rosa = Cliente.objects.get()
+    assert rosa.acepta_publicidad_en is not None and rosa.politica_version == settings_politica()
+    assert r.json()["cliente"]["acepta_publicidad"] is True
+    app = ApiCliente(rosa)
+    r = app.c.put("/cliente/v1/yo", {"nombre": "Rosa Paz", "acepta_publicidad": False}, content_type="application/json")
+    assert r.json()["acepta_publicidad"] is False
+    rosa.refresh_from_db()
+    assert rosa.acepta_publicidad_en is None
+
+
+def test_sin_permiso_no_entra_en_ninguna_campana(con_sellos, limpieza, api, reloj):
+    _cita_terminada(api, limpieza, reloj, hora=9)
+    assert api.get("/campanas/previa", segmento="todos").json() == {"destinatarios": 0, "con_app": 0}

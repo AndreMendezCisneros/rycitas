@@ -259,6 +259,9 @@
       type: "tel", inputmode: "tel", autocomplete: "tel-national", maxlength: "16", placeholder: "987 654 321", value: estado.celular,
     });
     const acepta = campo("acepta", { type: "checkbox", checked: estado.acepta });
+    // Permiso aparte y opcional para promociones (Ley 29733): sin marcarlo, la reserva funciona igual.
+    const publicidad = el("input", { id: "publicidad", type: "checkbox", checked: Boolean(estado.publicidad) });
+    publicidad.addEventListener("change", () => { estado.publicidad = publicidad.checked; });
     const oferta = el("input", {
       id: "oferta", type: "text", inputmode: "decimal", maxlength: "8", placeholder: String(precioReferencia() ?? ""),
       value: estado.oferta, "aria-describedby": "error-oferta ayuda-oferta",
@@ -315,6 +318,7 @@
             nombre: estado.nombre.trim(),
             celular: `+51${soloCelular(estado.celular)}`,
             acepta_politica: true,
+            acepta_publicidad: Boolean(estado.publicidad),
             turnstile: tokenTurnstile,
             profesional: estado.profesional ? estado.profesional.id : null,
             precio_ofrecido: ofertable() && estado.oferta.trim() ? Number(estado.oferta.replace(",", ".")) : null,
@@ -384,6 +388,9 @@
           el("label", { for: "acepta" }, "Acepto el uso de mis datos según la ", el("a", { href: "/privacidad/", target: "_blank", rel: "noopener" }, "política de datos"), "."),
         ),
         errores.acepta,
+        el("div", { class: "casilla" }, publicidad,
+          el("label", { for: "publicidad" }, `Quiero recibir promociones de ${voc.el_local} (opcional).`),
+        ),
       ),
       turnstile,
       enviar,

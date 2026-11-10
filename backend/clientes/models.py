@@ -23,6 +23,11 @@ class Cliente(models.Model):
     celular_verificado_en = models.DateTimeField(
         null=True, blank=True, help_text="Al abrir en la app el enlace de una cita enviado a ese WhatsApp."
     )
+    politica_version = models.CharField(max_length=20, blank=True, help_text="Versión de la política que aceptó.")
+    consentimiento_en = models.DateTimeField(null=True, blank=True)
+    acepta_publicidad_en = models.DateTimeField(
+        null=True, blank=True, help_text="Consentimiento aparte para recibir promociones. Vacío: no se le envían."
+    )
     codigo_referido = models.CharField(max_length=8, unique=True, default=codigo_referido)
     referido_por = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="referidos")
     referido_premiado_en = models.DateTimeField(null=True, blank=True)

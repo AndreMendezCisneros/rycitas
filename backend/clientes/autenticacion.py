@@ -69,7 +69,7 @@ def _limpiar(nombre: str, correo: str, celular: str) -> tuple[str, str, str]:
     return nombre[:120], correo, normalizar_celular(celular)
 
 
-def registrar(nombre: str, correo: str, celular: str, referido: str = "") -> dict:
+def registrar(nombre: str, correo: str, celular: str, referido: str = "", acepta_publicidad: bool = False) -> dict:
     """Devuelve {"sesion": tokens, "cliente": ...} o, con verificación activa, {"verificar": True}."""
     nombre, correo, celular = _limpiar(nombre, correo, celular)
     with transaction.atomic():
@@ -79,7 +79,16 @@ def registrar(nombre: str, correo: str, celular: str, referido: str = "") -> dic
             padrino = Cliente.objects.filter(codigo_referido=referido.strip().upper()).first() if referido else None
             if referido and padrino is None:
                 raise ErrorNegocio("referido_invalido", "Ese código de invitación no existe.", 422)
-            cliente = Cliente.objects.create(nombre=nombre, correo=correo, celular=celular, referido_por=padrino)
+            ahora = timezone.now()
+            cliente = Cliente.objects.create(
+                nombre=nombre,
+                correo=correo,
+                celular=celular,
+                referido_por=padrino,
+                consentimiento_en=ahora,
+                politica_version=settings.POLITICA_VERSION,
+                acepta_publicidad_en=ahora if acepta_publicidad else None,
+            )
         elif not cliente.activo:
             raise ErrorNegocio("cuenta_inactiva", "Esta cuenta está desactivada.", 403)
         elif cliente.celular != celular and not settings.VERIFICAR_CLIENTES:

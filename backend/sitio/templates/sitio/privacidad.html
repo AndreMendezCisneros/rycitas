@@ -4,18 +4,69 @@
 <main class="pagina">
   <section class="pagina-tarjeta">
     <h1>Política de datos personales</h1>
-    <p>Texto base según la Ley N.º 29733. Debe revisarlo un abogado antes de usarlo con {{ voc.clientes }} reales.</p>
-    <h2>Qué datos pedimos</h2>
-    <p>Solo tu nombre, tu número de celular y el {{ voc.servicio }} que eliges. No necesitas crear una cuenta: este navegador recuerda tu nombre y tu número durante un rato para tu siguiente reserva, y luego los borra.</p>
-    {% if salud %}<p><strong>No escribas datos de salud</strong> (diagnósticos, medicinas, síntomas) en el formulario. Si hace falta, se los cuentas en persona a quien te atiende.</p>{% endif %}
+    <p>Versión {{ version }}. Cómo tratamos tus datos según la Ley N.º 29733, Ley de Protección de Datos Personales, y su
+      reglamento (D. S. N.º 016-2024-JUS).</p>
+
+    <h2>Quién es responsable</h2>
+    {% if consultorio %}
+    <p><strong>{{ consultorio.nombre }}</strong>{% if consultorio.direccion %}, {{ consultorio.direccion }}{% endif %}, es
+      el titular de los datos de tus citas: decide para qué se usan. Para agendar usa <strong>RyCitas</strong>, la
+      plataforma de reservas, que trata los datos por encargo suyo y solo para lo que se describe aquí.</p>
+    {% else %}
+    <p>La app y la plataforma <strong>RyCitas</strong> las opera
+      {% if titular.nombre %}<strong>{{ titular.nombre }}</strong>{% if titular.documento %} ({{ titular.documento }}){% endif %}{% if titular.domicilio %}, con domicilio en {{ titular.domicilio }}{% endif %}{% else %}el titular de la plataforma{% endif %}.
+      Cada negocio donde reservas es responsable de los datos de sus citas; RyCitas los trata por encargo suyo. De tu
+      cuenta en la app de clientes es responsable RyCitas.</p>
+    {% endif %}
+
+    <h2>Qué datos tratamos</h2>
+    <ul>
+      <li>Al reservar: tu nombre, tu número de WhatsApp, el {{ voc.servicio }} que eliges, la fecha y la hora.</li>
+      <li>Si usas la app de clientes: además tu correo, los lugares donde reservaste, tus sellos y cupones.</li>
+      <li>Si aceptas avisos en la app: un identificador del teléfono para enviarte notificaciones.</li>
+      <li>Para evitar abusos guardamos una huella cifrada de tu conexión (no tu dirección IP) durante una hora.</li>
+    </ul>
+    {% if salud %}<p><strong>No escribas datos de salud</strong> (diagnósticos, medicinas, síntomas) en el formulario. El
+      {{ voc.servicio }} que eliges puede revelar algo de tu salud: por eso las notificaciones nunca lo muestran y solo
+      lo ve {{ voc.el_local }}.</p>{% endif %}
+    <p>Si reservas para un menor de edad, declaras ser su padre, madre o tutor y das el consentimiento por él.</p>
+
     <h2>Para qué los usamos</h2>
-    <p>Para registrar tu cita{% if consultorio %} en {{ consultorio.nombre }}{% endif %}, y para que {{ voc.el_local }} te escriba por WhatsApp para confirmarla o recordártela. No los vendemos ni los usamos para publicidad.</p>
-    <h2>Quién los trata</h2>
-    <p>{{ voc.el_local|capfirst }} donde reservas y la plataforma de reservas que usa. Los mensajes sobre tu cita los envía {{ voc.el_local }} desde su propio WhatsApp (Meta), según las condiciones de WhatsApp.</p>
+    <ul>
+      <li>Registrar tu cita y que {{ voc.el_local }} te escriba por WhatsApp para confirmarla, recordártela o avisarte
+        de un cambio. Para esto no hace falta nada más que tu reserva.</li>
+      <li>En la app de clientes: mostrarte tus citas, sellos y cupones.</li>
+      <li><strong>Promociones, solo si lo aceptas aparte.</strong> Es opcional: si no marcas esa casilla no te enviamos
+        ninguna. Puedes retirarlo cuando quieras desde la app o escribiendo a {{ voc.el_local }}.</li>
+    </ul>
+    <p>No vendemos tus datos ni los cedemos a terceros para su propia publicidad.</p>
+
+    <h2>Quién más interviene</h2>
+    <p>Para funcionar usamos estos proveedores, que tratan los datos solo por nuestro encargo, algunos fuera del Perú:</p>
+    <ul>
+      <li>Cloudflare (red y protección contra robots) y el proveedor del servidor donde se aloja el sistema.</li>
+      <li>Google Firebase, para las notificaciones de la app.</li>
+      <li>Sentry, para registrar errores técnicos (sin nombres ni números).</li>
+      <li>El servicio de correo que envía los códigos de acceso de la app.</li>
+      <li>Cloudflare R2, para las copias de seguridad cifradas.</li>
+    </ul>
+    <p>Los mensajes de WhatsApp los envía {{ voc.el_local }} desde su propia cuenta, según las condiciones de WhatsApp
+      (Meta).</p>
+
     <h2>Cuánto tiempo se guardan</h2>
-    <p>Mientras seas {{ voc.cliente }} {{ voc.del_local }}. Los registros técnicos se borran a los 90 días.</p>
+    <p>Los datos de tus citas, mientras seas {{ voc.cliente }} {{ voc.del_local }} y hasta 5 años después de tu última
+      cita, salvo que pidas borrarlos antes. Tu cuenta de la app, hasta que la elimines. Las copias de seguridad cifradas
+      se borran a los 30 días. Los registros técnicos (accesos y errores), a los 90 días.</p>
+
     <h2>Tus derechos</h2>
-    <p>Puedes pedir ver, corregir o borrar tus datos por WhatsApp: {{ voc.el_local }} atiende el borrado en menos de 7 días.</p>
+    <p>Puedes pedir acceder a tus datos, corregirlos, cancelarlos (borrarlos) u oponerte a su uso:</p>
+    <ul>
+      <li>escribiendo a {{ voc.el_local }} por WhatsApp; atiende el pedido en un plazo máximo de 10 días hábiles;</li>
+      <li>desde la app de clientes, en «Mi cuenta» → «Eliminar mi cuenta»;</li>
+      {% if titular.correo %}<li>escribiendo a <a href="mailto:{{ titular.correo }}">{{ titular.correo }}</a>.</li>{% endif %}
+    </ul>
+    <p>Si no te atendemos, puedes reclamar ante la Autoridad Nacional de Protección de Datos Personales del Ministerio
+      de Justicia y Derechos Humanos.</p>
     <p><a href="/">Volver</a></p>
   </section>
 </main>

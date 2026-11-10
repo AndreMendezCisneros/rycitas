@@ -44,4 +44,9 @@ def secretos_de_produccion(app_configs, **kwargs):
                 id="denticita.E005",
             )
         )
+    for nombre in ("TITULAR_NOMBRE", "TITULAR_DOCUMENTO", "TITULAR_DOMICILIO", "TITULAR_CORREO"):
+        if not getattr(settings, nombre):
+            errores.append(
+                Error(f"Falta {nombre}: la política de datos debe identificar al titular (Ley 29733)", id="denticita.E006")
+            )
     return errores

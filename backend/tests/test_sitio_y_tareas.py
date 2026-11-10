@@ -138,6 +138,8 @@ PRODUCCION = {
     "SECRET_KEY": "s" * 50, "JWT_SECRET": "j" * 50, "TURNSTILE_SECRET": "x", "TURNSTILE_SITE_KEY": "x",
     "FIREBASE_PROJECT_ID": "rycitas", "FIREBASE_CREDENCIALES": "/secretos/firebase.json",
     "PLATAFORMA_DOMINIO": "ryjec.com", "VERIFICAR_CLIENTES": True, "EMAIL_HOST": "smtp.ejemplo.pe",
+    "TITULAR_NOMBRE": "RYJEC S.A.C.", "TITULAR_DOCUMENTO": "RUC 20000000001", "TITULAR_DOMICILIO": "Ayacucho",
+    "TITULAR_CORREO": "datos@ryjec.com",
 }
 
 

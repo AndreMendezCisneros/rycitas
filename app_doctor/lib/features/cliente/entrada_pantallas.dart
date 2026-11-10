@@ -158,6 +158,7 @@ class _RegistroClienteState extends ConsumerState<RegistroClientePantalla> {
   final _referido = TextEditingController();
   final _codigo = TextEditingController();
   bool _acepta = false;
+  bool _publicidad = false;
   bool _conInvitacion = false;
   bool _faltaCodigo = false;
   bool _enviando = false;
@@ -194,6 +195,7 @@ class _RegistroClienteState extends ConsumerState<RegistroClientePantalla> {
           correo: _correo.text,
           celular: _celular.text,
           referido: _referido.text,
+          aceptaPublicidad: _publicidad,
         );
         if (r == ResultadoRegistro.faltaCodigo && mounted) setState(() => _faltaCodigo = true);
       }
@@ -312,6 +314,15 @@ class _RegistroClienteState extends ConsumerState<RegistroClientePantalla> {
                               style: TextStyle(color: esquema.primary, decoration: TextDecoration.underline),
                             ),
                           ),
+                        ),
+                        // Permiso aparte y opcional (Ley 29733): sin marcarlo, la cuenta funciona igual.
+                        CheckboxListTile(
+                          key: const Key('cliente-publicidad'),
+                          value: _publicidad,
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          onChanged: (v) => setState(() => _publicidad = v ?? false),
+                          title: const Text('Quiero recibir promociones de los negocios donde reservo (opcional).'),
                         ),
                       ],
                       if (_error != null)

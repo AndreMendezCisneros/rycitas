@@ -29,6 +29,7 @@ class ReservaEntrada(Schema):
     nombre: str
     celular: str
     acepta_politica: bool = False
+    acepta_publicidad: bool = False  # aparte y opcional: promociones del negocio
     turnstile: str = ""
     profesional: int | None = None  # None: «Cualquiera»
     precio_ofrecido: float | None = None
@@ -132,6 +133,7 @@ def reservar(request, slug: str, datos: ReservaEntrada):
         datos.acepta_politica,
         profesional_id=datos.profesional,
         precio_ofrecido=datos.precio_ofrecido,
+        acepta_publicidad=datos.acepta_publicidad,
     )
     return 201, presentacion.reserva_creada(cita)
 
