@@ -37,6 +37,14 @@ ufw enable
 Ojo: Docker publica puertos saltándose `ufw` por defecto. Hay que cerrar eso también: restringir en el firewall del
 proveedor del VPS, o aplicar las reglas en la cadena `DOCKER-USER`. Comprobar desde fuera con `curl -k https://IP_DEL_VPS`.
 
+## 2b. Panel y /admin solo para el equipo (imprescindible)
+
+`/panel/` y `/admin/` exportan y cambian los datos de **todos** los negocios. Además del límite de intentos de la
+aplicación (5 por cuenta y 20 por IP por hora), ponerlos detrás de **Cloudflare Zero Trust → Access** (gratis hasta 50
+usuarios). Crear una aplicación *Self-hosted* para `rycitas.ryjec.com/panel*` y `rycitas.ryjec.com/admin*`, con una
+política *Allow* solo para los correos del equipo y el código de un solo uso por correo. Así, nadie fuera del equipo
+llega siquiera al formulario de login.
+
 ## 3. Desplegar
 
 ```bash

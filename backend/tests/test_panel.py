@@ -198,3 +198,48 @@ def test_editar_profesionales_y_sus_servicios(panel, consultorio, limpieza):
     assert r.status_code == 302, r.content
     nuevo = consultorio.profesionales.get(nombre="Dr. Nuevo")
     assert list(nuevo.servicios.all()) == [limpieza]
+
+
+# --- SEG-05: login del panel y de /admin con límite de intentos ------------------------------------------
+
+
+def _entrar(c, clave, ruta="/panel/entrar/", correo="equipo@plataforma.test"):
+    return c.post(ruta, {"username": correo, "password": clave})
+
+
+def test_panel_limita_intentos_de_login_por_cuenta(staff):
+    c = Client(headers={"cf-connecting-ip": "200.9.9.1"})
+    for _ in range(5):
+        assert _entrar(c, "clave-mala-123").status_code == 200
+    # Bloqueada 15 min: ni con la clave correcta, ni desde /admin.
+    assert _entrar(c, "clave-segura-123").status_code == 200
+    assert _entrar(Client(headers={"cf-connecting-ip": "200.9.9.2"}), "clave-segura-123",
+                   ruta="/admin/login/").status_code == 200
+    staff.refresh_from_db()
+    assert staff.bloqueado_hasta is not None
+
+
+def test_panel_limita_intentos_por_ip_aunque_cambie_de_cuenta(staff, settings):
+    settings.PANEL_MAX_INTENTOS_IP_HORA = 3
+    c = Client(headers={"cf-connecting-ip": "200.9.9.3"})
+    for i in range(3):
+        _entrar(c, "clave-mala-123", correo=f"otro{i}@plataforma.test")
+    r = _entrar(c, "clave-segura-123")
+    assert r.status_code == 200 and c.get("/panel/").status_code == 302
+    # Desde otra IP la cuenta sigue funcionando.
+    otra = Client(headers={"cf-connecting-ip": "200.9.9.4"})
+    assert _entrar(otra, "clave-segura-123").status_code == 302
+
+
+def test_un_login_correcto_reinicia_el_contador(staff):
+    c = Client(headers={"cf-connecting-ip": "200.9.9.5"})
+    for _ in range(4):
+        _entrar(c, "clave-mala-123")
+    assert _entrar(c, "clave-segura-123").status_code == 302
+    staff.refresh_from_db()
+    assert staff.intentos_fallidos == 0
+
+
+def test_salir_cierra_la_sesion(panel):
+    assert panel.post("/panel/salir/").status_code == 302
+    assert panel.get("/panel/").status_code == 302

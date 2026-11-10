@@ -148,6 +148,11 @@ TOKEN_ACCESO_MINUTOS = 15
 TOKEN_RENOVACION_DIAS = 365
 LOGIN_MAX_INTENTOS = 5
 LOGIN_ESPERA_MINUTOS = 15
+# Panel y /admin: además del límite por cuenta, uno por IP (denticita.acceso, SEG-05).
+AUTHENTICATION_BACKENDS = ["denticita.acceso.AccesoConLimite"]
+PANEL_MAX_INTENTOS_IP_HORA = int(os.environ.get("PANEL_MAX_INTENTOS_IP_HORA", "20"))
+# Mensajes del panel (incluyen claves generadas) en la sesión del servidor, no en una cookie legible (SEG-19).
+MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 
 # Reserva.
 MINUTOS_PRERRESERVA = 15
