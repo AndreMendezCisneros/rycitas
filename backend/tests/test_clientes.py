@@ -7,6 +7,7 @@ import pytest
 from django.core import mail
 from django.test import Client
 
+from agenda.models import Tratamiento
 from citas.models import Cita, Estado
 from citas.servicios import firma_whatsapp
 from clientes.autenticacion import emitir_acceso as acceso_cliente
@@ -507,3 +508,69 @@ def test_logout_borra_el_dispositivo_del_telefono(cliente):
                      content_type="application/json")
     assert r.status_code == 204
     assert list(DispositivoCliente.objects.values_list("token_fcm", flat=True)) == ["tok-otro"]
+
+
+# --- Historial ---------------------------------------------------------------------------------------------
+
+
+def _al_pasado(cliente, dias: int, slug="sonrisa", estado=Estado.TERMINADA) -> Cita:
+    """Reserva por la web con el número de Rosa y la mueve [dias] atrás, ya terminada."""
+    r = reservar(cliente, slug=slug)
+    assert r.status_code == 201, r.content
+    cita = Cita.objects.get(token_gestion=r.json()["token"])
+    corrimiento = timedelta(days=dias)
+    Cita.objects.filter(pk=cita.pk).update(
+        inicio=cita.inicio - corrimiento, fin=cita.fin - corrimiento, fin_ocupado=cita.fin_ocupado - corrimiento,
+        estado=estado,
+    )
+    return cita
+
+
+def _copia_en_el_pasado(cita: Cita, dias: int) -> Cita:
+    """Otra visita igual, [dias] antes (sin pasar por la reserva y su límite por número)."""
+    original = Cita.objects.get(pk=cita.pk)
+    original.pk = None
+    original.token_gestion = f"t{dias}-{original.token_gestion}"[:64]
+    corrimiento = timedelta(days=dias)
+    original.inicio, original.fin = original.inicio - corrimiento, original.fin - corrimiento
+    original.fin_ocupado -= corrimiento
+    original.save()
+    return original
+
+
+def test_el_historial_se_pide_de_20_en_20(cliente, consultorio, limpieza):
+    base = _al_pasado(cliente, 1)
+    ids = [base.pk] + [_copia_en_el_pasado(base, dias).pk for dias in range(1, 23)]  # 23 visitas
+    app = ApiCliente(_cuenta())
+    primera = app.get("/mis-citas/historial").json()
+    assert [c["id"] for c in primera["citas"]] == ids[:20] and primera["hay_mas"] is True
+    assert primera["visitas"] == 23 and primera["negocios"] == [{"slug": "sonrisa", "nombre": consultorio.nombre}]
+    segunda = app.get("/mis-citas/historial", antes=primera["citas"][-1]["inicio"]).json()
+    assert [c["id"] for c in segunda["citas"]] == ids[20:] and segunda["hay_mas"] is False
+
+
+def test_el_historial_se_filtra_por_negocio_y_no_trae_las_proximas(cliente, consultorio, otro_consultorio, limpieza):
+    Tratamiento.objects.create(consultorio=otro_consultorio, nombre="Limpieza", slug="limpieza", duracion_min=30)
+    _al_pasado(cliente, 2)
+    ajena = _al_pasado(cliente, 3, slug="ajeno", estado=Estado.NO_ASISTIO)
+    assert reservar(cliente).status_code == 201  # próxima: no va al historial
+    app = ApiCliente(_cuenta())
+    todo = app.get("/mis-citas/historial").json()
+    assert len(todo["citas"]) == 2 and todo["visitas"] == 1
+    solo_ajeno = app.get("/mis-citas/historial", negocio="ajeno").json()["citas"]
+    assert [c["id"] for c in solo_ajeno] == [ajena.pk] and solo_ajeno[0]["estado"] == Estado.NO_ASISTIO
+
+
+def test_sin_whatsapp_probado_el_historial_trae_solo_lo_reservado_desde_la_app(cliente, consultorio, limpieza):
+    _al_pasado(cliente, 2)  # hecha en la web con ese número: no se muestra todavía
+    cuenta = _cuenta(verificado=False)
+    propia = _al_pasado(cliente, 5)
+    Cita.objects.filter(pk=propia.pk).update(cliente=cuenta)
+    historial = ApiCliente(cuenta).get("/mis-citas/historial").json()
+    assert [c["id"] for c in historial["citas"]] == [propia.pk] and historial["completo"] is False
+    intrusa = ApiCliente(_cuenta(correo="intrusa@correo.pe", verificado=False)).get("/mis-citas/historial").json()
+    assert intrusa["citas"] == [] and intrusa["negocios"] == []
+
+
+def test_el_historial_rechaza_una_fecha_de_pagina_invalida(consultorio):
+    assert ApiCliente(_cuenta()).get("/mis-citas/historial", antes="ayer").status_code == 422

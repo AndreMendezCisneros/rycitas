@@ -174,6 +174,32 @@ AlmacenMemoria _conSesionCliente() => AlmacenMemoria()
   ..datos[claveModo] = 'cliente'
   ..datos[claveRenovacionCliente] = 'r1';
 
+Map<String, dynamic> _pasada(int id, String estado, String slug, String nombre, String inicio) => {
+  'id': id,
+  'estado': estado,
+  'estado_texto': {'terminada': 'Atendida', 'no_asistio': 'No asististe', 'cancelada': 'Cancelada'}[estado],
+  'inicio': inicio,
+  'fin': inicio,
+  'tratamiento': 'Limpieza facial',
+  'tratamiento_slug': 'limpieza-facial',
+  'profesional': 'Ana',
+  'precio_texto': 'S/ 80',
+  'notas': '',
+  'negocio': {'slug': slug, 'nombre': nombre},
+  'consultorio': {'nombre': nombre, 'direccion': 'Av. Sol 123', 'mapa_url': '', 'whatsapp': '+51999888777'},
+};
+
+Map<String, dynamic> _historial(List<Map<String, dynamic>> citas, {bool hayMas = false, bool completo = true}) => {
+  'citas': citas,
+  'hay_mas': hayMas,
+  'visitas': 3,
+  'negocios': [
+    {'slug': 'glowclinic', 'nombre': 'Glow Clinic'},
+    {'slug': 'barber', 'nombre': 'Barber Wari'},
+  ],
+  'completo': completo,
+};
+
 void main() {
   test('lee token y firma del enlace de la cita que llega por WhatsApp', () {
     final e = leerEnlaceDeCita('Mira tu cita: https://sonrisawari.ryjec.com/c/Ab_9-x/?v=0f3a9c ');
@@ -337,6 +363,87 @@ void main() {
     expect(find.text('K7PQ2M'), findsOneWidget);
   });
 
+  testWidgets('el historial muestra las citas pasadas por mes, filtra por lugar y carga más', (t) async {
+    final pedidos = <Map<String, dynamic>>[];
+    final red = RedFalsa({
+      ..._rutasCliente(),
+      'GET /mis-citas/historial': (o) {
+        pedidos.add(o.queryParameters);
+        if (o.queryParameters['antes'] != null) {
+          return ok(_historial([_pasada(3, 'terminada', 'glowclinic', 'Glow Clinic', '2026-08-02T15:00:00-05:00')]));
+        }
+        if (o.queryParameters['negocio'] == 'barber') {
+          return ok(_historial([_pasada(2, 'no_asistio', 'barber', 'Barber Wari', '2026-10-20T10:00:00-05:00')]));
+        }
+        return ok(
+          _historial([
+            _pasada(1, 'terminada', 'glowclinic', 'Glow Clinic', '2026-11-03T16:00:00-05:00'),
+            _pasada(2, 'no_asistio', 'barber', 'Barber Wari', '2026-10-20T10:00:00-05:00'),
+          ], hayMas: true),
+        );
+      },
+    });
+    await _abrir(t, red, _conSesionCliente());
+    await t.tap(find.text('Mis citas'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Historial'));
+    await t.pumpAndSettle();
+    expect(find.text('3 visitas · 2 lugares'), findsOneWidget);
+    expect(find.text('NOVIEMBRE 2026'), findsOneWidget);
+    expect(find.text('OCTUBRE 2026'), findsOneWidget);
+    expect(find.byKey(const Key('cita-cliente-1')), findsOneWidget);
+    expect(find.byKey(const Key('reservar-de-nuevo-1')), findsOneWidget);
+    expect(find.byKey(const Key('reservar-de-nuevo-2')), findsNothing); // no asistió: sin «Reservar de nuevo»
+    expect(find.byKey(const Key('faltan-citas')), findsNothing);
+
+    await t.scrollUntilVisible(
+      find.byKey(const Key('historial-ver-mas')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await t.tap(find.byKey(const Key('historial-ver-mas')));
+    await t.pumpAndSettle();
+    expect(pedidos.last['antes'], '2026-10-20T10:00:00-05:00');
+    expect(find.text('AGOSTO 2026'), findsOneWidget);
+
+    await t.scrollUntilVisible(find.byKey(const Key('filtro-barber')), -200, scrollable: find.byType(Scrollable).first);
+    await t.tap(find.byKey(const Key('filtro-barber')));
+    await t.pumpAndSettle();
+    expect(pedidos.last['negocio'], 'barber');
+    expect(find.byKey(const Key('cita-cliente-1')), findsNothing);
+    expect(find.byKey(const Key('cita-cliente-2')), findsOneWidget);
+  });
+
+  testWidgets('sin el WhatsApp probado el historial explica cómo traer las demás citas', (t) async {
+    final red = RedFalsa({
+      ..._rutasCliente(),
+      'GET /mis-citas/historial': (_) => ok(_historial(const [], completo: false)),
+    });
+    await _abrir(t, red, _conSesionCliente());
+    await t.tap(find.text('Mis citas'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Historial'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('faltan-citas')), findsOneWidget);
+    expect(find.text('Pegar el enlace de mi cita'), findsOneWidget);
+  });
+
+  testWidgets('«Reservar de nuevo» abre la reserva de ese servicio en ese lugar', (t) async {
+    final red = RedFalsa({
+      ..._rutasCliente(),
+      'GET /mis-citas/historial': (_) =>
+          ok(_historial([_pasada(1, 'terminada', 'glowclinic', 'Glow Clinic', '2026-11-03T16:00:00-05:00')])),
+    });
+    await _abrir(t, red, _conSesionCliente());
+    await t.tap(find.text('Mis citas'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Historial'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('reservar-de-nuevo-1')));
+    await t.pumpAndSettle();
+    expect(red.llamadas, contains('GET /negocios/glowclinic'));
+  });
+
   testWidgets('cerrar sesión vuelve a la elección del modo', (t) async {
     final red = RedFalsa({..._rutasCliente(), 'POST /auth/logout': (_) => (status: 204, cuerpo: null)});
     final almacen = _conSesionCliente();
@@ -365,7 +472,16 @@ void main() {
   testWidgets('capturas del modo cliente', (t) async {
     if (carpetaCapturas == null) return;
     final tema = Platform.environment['TEMA'] ?? 'claro';
-    final red = RedFalsa(_rutasCliente());
+    final red = RedFalsa({
+      ..._rutasCliente(),
+      'GET /mis-citas/historial': (_) => ok(
+        _historial([
+          _pasada(1, 'terminada', 'glowclinic', 'Glow Clinic', '2026-11-03T16:00:00-05:00'),
+          _pasada(2, 'no_asistio', 'barber', 'Barber Wari', '2026-10-20T10:00:00-05:00'),
+          _pasada(3, 'terminada', 'glowclinic', 'Glow Clinic', '2026-10-02T15:00:00-05:00'),
+        ], completo: false),
+      ),
+    });
     await _abrir(t, red, _conSesionCliente()..datos[claveTema] = tema);
     await capturar(t, 'cliente-inicio-$tema');
     await t.tap(find.byKey(const Key('rubi')));
@@ -376,6 +492,9 @@ void main() {
     await t.tap(find.text('Mis citas'));
     await t.pumpAndSettle();
     await capturar(t, 'cliente-citas-$tema');
+    await t.tap(find.text('Historial'));
+    await t.pumpAndSettle();
+    await capturar(t, 'cliente-historial-$tema');
     await t.tap(find.text('Beneficios'));
     await t.pumpAndSettle();
     await capturar(t, 'cliente-beneficios-$tema');

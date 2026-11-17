@@ -14,12 +14,14 @@ import '../../shared/diseno/paleta.dart';
 import '../../shared/diseno/vidrio.dart';
 import 'datos_cliente.dart';
 import 'gamificacion.dart';
+import 'inicio_cliente.dart';
 import 'lugares_hoja.dart';
+import 'mascota.dart';
 import 'widgets_cliente.dart';
 import '../../shared/diseno/tonos.dart';
 
-/// «Mis citas»: un calendario con todas sus citas (en todos los lugares) y la lista. Tocar un día o una cita abre
-/// sus detalles en una hoja flotante. Cancelar o mover lo hace el negocio: se le escribe.
+/// «Mis citas»: Próximas, Historial (todas las anteriores, de 20 en 20) y Calendario. Tocar una cita abre sus
+/// detalles en una hoja flotante. Cancelar o mover lo hace el negocio: se le escribe.
 class MisCitasPantalla extends ConsumerStatefulWidget {
   const MisCitasPantalla({super.key, this.citaInicial});
 
@@ -30,8 +32,11 @@ class MisCitasPantalla extends ConsumerStatefulWidget {
   ConsumerState<MisCitasPantalla> createState() => _MisCitasPantallaState();
 }
 
+enum VistaCitas { proximas, historial, calendario }
+
 class _MisCitasPantallaState extends ConsumerState<MisCitasPantalla> {
-  bool _verLista = false;
+  /// Sin elegir: Próximas si tiene alguna; si no, el Historial.
+  VistaCitas? _vista;
   late DateTime _mes = DateTime(Fechas.ahora().year, Fechas.ahora().month);
   DateTime? _elegido;
   String? _abierta;
@@ -76,37 +81,35 @@ class _MisCitasPantallaState extends ConsumerState<MisCitasPantalla> {
               final proximas = lista(d['proximas']);
               final pasadas = lista(d['pasadas']);
               final todas = [...proximas, ...pasadas];
+              final vista =
+                  _vista ?? (proximas.isEmpty && pasadas.isNotEmpty ? VistaCitas.historial : VistaCitas.proximas);
               _abrirInicial(todas);
               return RefreshIndicator(
                 onRefresh: () async => ref.invalidate(misCitasProvider),
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   children: [
-                    Row(
-                      children: [
-                        Expanded(child: Text('Mis citas', style: textos.headlineMedium)),
-                        SegmentedButton<bool>(
-                          showSelectedIcon: false,
-                          segments: const [
-                            ButtonSegment(
-                              value: false,
-                              icon: Icon(Icons.calendar_month_rounded),
-                              tooltip: 'Calendario',
-                            ),
-                            ButtonSegment(value: true, icon: Icon(Icons.view_agenda_rounded), tooltip: 'Lista'),
-                          ],
-                          selected: {_verLista},
-                          onSelectionChanged: (v) => setState(() => _verLista = v.first),
-                        ),
+                    Text('Mis citas', style: textos.headlineMedium),
+                    const SizedBox(height: 12),
+                    SegmentedButton<VistaCitas>(
+                      key: const Key('vista-citas'),
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(value: VistaCitas.proximas, label: Text('Próximas')),
+                        ButtonSegment(value: VistaCitas.historial, label: Text('Historial')),
+                        ButtonSegment(value: VistaCitas.calendario, label: Text('Calendario')),
                       ],
+                      selected: {vista},
+                      onSelectionChanged: (v) => setState(() => _vista = v.first),
                     ),
-                    const SizedBox(height: 14),
-                    if (proximas.isNotEmpty) ...[ProximaCitaTarjeta(cita: proximas.first), const SizedBox(height: 16)],
+                    const SizedBox(height: 16),
                     AnimatedSwitcher(
                       duration: sinEfectos(context) ? Duration.zero : const Duration(milliseconds: 300),
-                      child: _verLista
-                          ? _Lista(key: const ValueKey('lista'), proximas: proximas, pasadas: pasadas)
-                          : _calendario(todas),
+                      child: switch (vista) {
+                        VistaCitas.proximas => _Proximas(key: const ValueKey('proximas'), proximas: proximas),
+                        VistaCitas.historial => const HistorialCitas(key: ValueKey('historial')),
+                        VistaCitas.calendario => _calendario(todas),
+                      },
                     ),
                   ],
                 ),
@@ -289,23 +292,23 @@ class ProximaCitaTarjeta extends StatelessWidget {
   }
 }
 
-class _Lista extends StatelessWidget {
-  const _Lista({super.key, required this.proximas, required this.pasadas});
+class _Proximas extends StatelessWidget {
+  const _Proximas({super.key, required this.proximas});
 
   final List<Json> proximas;
-  final List<Json> pasadas;
 
   @override
   Widget build(BuildContext context) {
-    if (proximas.isEmpty && pasadas.isEmpty) {
-      return const AvisoSuave(icono: Icons.event_note_rounded, texto: 'Todavía no tienes citas. ¡Reserva la primera!');
+    if (proximas.isEmpty) {
+      return const _SinCitas(texto: 'No tienes citas por venir. ¿Te consentimos pronto?');
     }
     var i = 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (proximas.isNotEmpty) const TituloGrupo('Próximas'),
-        for (final c in proximas)
+        ProximaCitaTarjeta(cita: proximas.first),
+        const SizedBox(height: 16),
+        for (final c in proximas.skip(1))
           AparecerEnCascada(
             indice: i++,
             child: Padding(
@@ -313,13 +316,183 @@ class _Lista extends StatelessWidget {
               child: _CitaCliente(cita: c, alTocar: () => mostrarDetalleCita(context, c)),
             ),
           ),
-        if (pasadas.isNotEmpty) const TituloGrupo('Anteriores'),
-        for (final c in pasadas)
-          AparecerEnCascada(
-            indice: i++,
-            child: Padding(
+      ],
+    );
+  }
+}
+
+class _SinCitas extends StatelessWidget {
+  const _SinCitas({required this.texto});
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 24),
+    child: Column(
+      children: [
+        const Rubi(tam: 84, expresion: ExpresionRubi.dormida, etiqueta: 'Rubí descansando'),
+        const SizedBox(height: 12),
+        Text(
+          texto,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: context.tonos.textoSuave),
+        ),
+        const SizedBox(height: 14),
+        FilledButton.icon(
+          key: const Key('buscar-lugar'),
+          onPressed: () => mostrarLugaresParaReservar(context),
+          icon: const Icon(Icons.search_rounded),
+          label: const Text('Buscar un lugar'),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Todas las citas que ya pasaron, agrupadas por mes, de 20 en 20, con filtro por lugar.
+class HistorialCitas extends ConsumerStatefulWidget {
+  const HistorialCitas({super.key});
+
+  @override
+  ConsumerState<HistorialCitas> createState() => _HistorialCitasState();
+}
+
+class _HistorialCitasState extends ConsumerState<HistorialCitas> {
+  final _citas = <Json>[];
+  List<Json> _negocios = const [];
+  int _visitas = 0;
+  bool _completo = true;
+  bool _hayMas = false;
+  bool _cargando = true;
+  Object? _error;
+  String _negocio = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  Future<void> _cargar({bool mas = false}) async {
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
+    try {
+      final d = await ref
+          .read(apiClienteProvider)
+          .get(
+            '/mis-citas/historial',
+            params: {
+              if (_negocio.isNotEmpty) 'negocio': _negocio,
+              if (mas && _citas.isNotEmpty) 'antes': _citas.last['inicio'],
+            },
+          );
+      if (!mounted) return;
+      setState(() {
+        if (!mas) _citas.clear();
+        _citas.addAll(lista(d['citas']));
+        _hayMas = d['hay_mas'] == true;
+        if (d['negocios'] != null && _negocio.isEmpty) _negocios = lista(d['negocios']);
+        if (d['visitas'] != null && _negocio.isEmpty) _visitas = d['visitas'] as int;
+        if (d['completo'] != null) _completo = d['completo'] == true;
+      });
+    } on ApiError catch (e) {
+      if (mounted) setState(() => _error = e);
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
+  void _filtrar(String slug) {
+    if (slug == _negocio) return;
+    _negocio = slug;
+    _cargar();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    if (_error != null && _citas.isEmpty) {
+      return ErrorConReintento(error: _error!, alReintentar: _cargar);
+    }
+    if (_cargando && _citas.isEmpty && _negocios.isEmpty) {
+      return const Padding(padding: EdgeInsets.all(32), child: Cargando());
+    }
+    // Agrupa por mes: «Noviembre 2026».
+    final porMes = <String, List<Json>>{};
+    for (final c in _citas) {
+      final mes = DateFormat('MMMM yyyy', 'es').format(Fechas.enLima(c['inicio'] as String));
+      porMes.putIfAbsent(mes[0].toUpperCase() + mes.substring(1), () => []).add(c);
+    }
+    final opciones = <Json>[
+      {'slug': '', 'nombre': 'Todos'},
+      ..._negocios,
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!_completo) const _FaltanCitas(),
+        if (_visitas > 0 || _negocios.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(
+              '$_visitas ${_visitas == 1 ? 'visita' : 'visitas'} · '
+              '${_negocios.length} ${_negocios.length == 1 ? 'lugar' : 'lugares'}',
+              key: const Key('resumen-historial'),
+              style: textos.titleSmall?.copyWith(color: context.tonos.textoSuave),
+            ),
+          ),
+        if (_negocios.length > 1)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final n in opciones)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8, bottom: 8),
+                    child: ChoiceChip(
+                      key: Key('filtro-${n['slug'] == '' ? 'todos' : n['slug']}'),
+                      label: Text(n['nombre'] as String),
+                      selected: _negocio == n['slug'],
+                      onSelected: (_) => _filtrar(n['slug'] as String),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        if (_citas.isEmpty && !_cargando)
+          const _SinCitas(texto: 'Aún no tienes visitas. Cuando vayas a un lugar, quedará aquí.'),
+        for (final MapEntry(key: mes, value: citas) in porMes.entries) ...[
+          TituloGrupo(mes),
+          for (final c in citas)
+            Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _CitaCliente(cita: c, pasada: true, alTocar: () => mostrarDetalleCita(context, c)),
+              child: _CitaCliente(
+                cita: c,
+                pasada: true,
+                alTocar: () => mostrarDetalleCita(context, c),
+                accion: c['estado'] == 'terminada'
+                    ? TextButton.icon(
+                        key: Key('reservar-de-nuevo-${c['id']}'),
+                        onPressed: () => context.push(
+                          '/cliente/negocio/${(c['negocio'] as Json)['slug']}/reservar/${c['tratamiento_slug']}',
+                        ),
+                        icon: const Icon(Icons.replay_rounded, size: 18),
+                        label: const Text('Reservar de nuevo'),
+                      )
+                    : null,
+              ),
+            ),
+        ],
+        if (_hayMas)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: OutlinedButton(
+              key: const Key('historial-ver-mas'),
+              onPressed: _cargando ? null : () => _cargar(mas: true),
+              child: Text(_cargando ? 'Cargando…' : 'Ver más'),
             ),
           ),
       ],
@@ -327,12 +500,51 @@ class _Lista extends StatelessWidget {
   }
 }
 
+/// Sin el WhatsApp probado solo se ven las citas reservadas desde la app: se explica cómo traer las demás.
+class _FaltanCitas extends ConsumerWidget {
+  const _FaltanCitas();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Card(
+    key: const Key('faltan-citas'),
+    color: context.tonos.ambarFondo,
+    margin: const EdgeInsets.only(bottom: 14),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '¿Faltan citas?',
+            style: TextStyle(fontWeight: FontWeight.w800, color: context.tonos.ambarTexto),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Aquí está lo que reservaste en la app. Las citas que hiciste por WhatsApp o en la web aparecen al pegar '
+            'el enlace que te mandó el negocio.',
+            style: TextStyle(color: context.tonos.ambarTexto),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: () => vincularConEnlace(context, ref),
+            icon: const Icon(Icons.link_rounded),
+            label: const Text('Pegar el enlace de mi cita'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _CitaCliente extends StatelessWidget {
-  const _CitaCliente({required this.cita, this.pasada = false, required this.alTocar});
+  const _CitaCliente({required this.cita, this.pasada = false, required this.alTocar, this.accion});
 
   final Json cita;
   final bool pasada;
   final VoidCallback alTocar;
+
+  /// Por ejemplo «Reservar de nuevo» en el historial.
+  final Widget? accion;
 
   @override
   Widget build(BuildContext context) {
@@ -385,7 +597,11 @@ class _CitaCliente extends StatelessWidget {
                   children: [
                     Text(negocio['nombre'] as String, style: Theme.of(context).textTheme.titleMedium),
                     Text(
-                      '${cita['tratamiento']} · ${Fechas.hora(cita['inicio'] as String)}',
+                      [
+                        cita['tratamiento'],
+                        Fechas.hora(cita['inicio'] as String),
+                        if ((cita['precio_texto'] as String? ?? '').isNotEmpty) cita['precio_texto'],
+                      ].join(' · '),
                       style: TextStyle(color: context.tonos.textoSuave),
                     ),
                     const SizedBox(height: 6),
@@ -404,6 +620,7 @@ class _CitaCliente extends StatelessWidget {
                       ],
                     ),
                     if (notas.isNotEmpty) NotaCita(notas, compacta: true),
+                    if (accion != null) Align(alignment: Alignment.centerLeft, child: accion),
                   ],
                 ),
               ),

@@ -12,6 +12,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from ninja import Router, Schema
 
 from agenda.models import Tratamiento
@@ -419,23 +420,59 @@ def _cita_cliente(cita: Cita) -> dict:
     }
 
 
-@router.get("/mis-citas")
-def mis_citas(request):
-    cliente = request.auth
+def _citas_del_cliente(cliente: Cliente):
     # Lo que reservó desde la app lo ve siempre; el resto de citas de su número, cuando probó que el WhatsApp es suyo.
     mias = Q(cliente=cliente)
     if _celular_confiable(cliente):
         mias |= Q(paciente__celular=cliente.celular)
-    consulta = (
+    return (
         Cita.objects.select_related("consultorio", "tratamiento", "profesional", "paciente", "cupon_usado__cupon")
         .filter(mias, consultorio__activo=True)
         .exclude(estado__in=[Estado.PENDIENTE, Estado.EXPIRADA])
     )
+
+
+ACTIVOS = [Estado.POR_APROBAR, Estado.PROGRAMADA, Estado.EN_CURSO]
+HISTORIAL_POR_PAGINA = 20
+
+
+@router.get("/mis-citas")
+def mis_citas(request):
+    consulta = _citas_del_cliente(request.auth)
     ahora = timezone.now()
-    activos = [Estado.POR_APROBAR, Estado.PROGRAMADA, Estado.EN_CURSO]
-    proximas = consulta.filter(estado__in=activos, fin__gte=ahora).order_by("inicio")[:30]
+    proximas = consulta.filter(estado__in=ACTIVOS, fin__gte=ahora).order_by("inicio")[:30]
     pasadas = consulta.exclude(pk__in=[c.pk for c in proximas]).order_by("-inicio")[:30]
     return {"proximas": [_cita_cliente(c) for c in proximas], "pasadas": [_cita_cliente(c) for c in pasadas]}
+
+
+@router.get("/mis-citas/historial")
+def historial(request, antes: str = "", negocio: str = ""):
+    """Las citas que ya pasaron, de la más reciente a la más antigua, de 20 en 20.
+
+    [antes]: el `inicio` de la última cita recibida, para pedir la página siguiente. [negocio]: filtra por slug.
+    """
+    consulta = _citas_del_cliente(request.auth).exclude(estado__in=ACTIVOS, fin__gte=timezone.now())
+    todas = consulta
+    if negocio:
+        consulta = consulta.filter(consultorio__slug=negocio)
+    if antes:
+        desde = parse_datetime(antes)
+        if desde is None:
+            raise ErrorNegocio("fecha_invalida", "La fecha de la página no es válida.", 422)
+        consulta = consulta.filter(inicio__lt=desde)
+    pagina = list(consulta.order_by("-inicio", "-pk")[: HISTORIAL_POR_PAGINA + 1])
+    hay_mas = len(pagina) > HISTORIAL_POR_PAGINA
+    pagina = pagina[:HISTORIAL_POR_PAGINA]
+    respuesta = {"citas": [_cita_cliente(c) for c in pagina], "hay_mas": hay_mas}
+    if not antes:
+        # Resumen y negocios para los filtros: solo en la primera página.
+        negocios = {}
+        for slug, nombre in todas.values_list("consultorio__slug", "consultorio__nombre").distinct():
+            negocios[slug] = nombre
+        respuesta["visitas"] = todas.filter(estado=Estado.TERMINADA).count()
+        respuesta["negocios"] = [{"slug": k, "nombre": v} for k, v in sorted(negocios.items(), key=lambda x: x[1])]
+        respuesta["completo"] = _celular_confiable(request.auth)
+    return respuesta
 
 
 @router.get("/logros")
