@@ -203,6 +203,58 @@ void main() {
     expect(enManana, findsNothing);
   });
 
+  testWidgets('reserva rápida: cliente nuevo, servicio, la hora más próxima ya elegida y notas', (t) async {
+    Map<String, dynamic>? creada;
+    final red = RedFalsa({
+      'POST /auth/refresh': (_) => ok(tokens),
+      'GET /negocio': (_) => ok(negocioJson()),
+      'GET /agenda': (_) => ok(hoy),
+      'GET /tratamientos': (_) => ok({
+        'tratamientos': [
+          {'id': 1, 'nombre': 'Corte clásico', 'duracion_min': 30},
+        ],
+      }),
+      'GET /citas/disponibilidad': (_) => ok({
+        'dias': [
+          {
+            'fecha': '2026-11-10',
+            'horas': ['2026-11-10T10:00:00-05:00', '2026-11-10T10:30:00-05:00'],
+          },
+        ],
+      }),
+      'POST /citas': (o) {
+        creada = o.data as Map<String, dynamic>;
+        return (status: 201, cuerpo: {'cita_id': 9, 'estado': 'programada', 'whatsapp_url': null, 'agenda': hoy});
+      },
+    });
+    await abrir(t, red, conSesion());
+    await t.tap(find.byKey(const Key('fab-reserva-rapida')));
+    await t.pumpAndSettle();
+    t.view.physicalSize = const Size(1080, 2340); // un teléfono de verdad: la hoja entra completa
+    t.view.devicePixelRatio = 2.75;
+    addTearDown(t.view.reset);
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('rapida-nuevo')));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('rapida-nombre')), 'Ana Paz');
+    await t.enterText(find.byKey(const Key('rapida-celular')), '987654321');
+    await t.ensureVisible(find.byKey(const Key('rapida-servicio-1')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('rapida-servicio-1')));
+    await t.pumpAndSettle();
+    await t.ensureVisible(find.byKey(const Key('campo-notas')));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('campo-notas')), 'Degradado bajo');
+    await t.pumpAndSettle();
+    final boton = find.byKey(const Key('reservar-rapido'));
+    await t.ensureVisible(boton);
+    await t.tap(boton);
+    await t.pumpAndSettle();
+    expect(creada?['inicio'], '2026-11-10T10:00:00-05:00'); // la más próxima, sin tocar nada
+    expect(creada?['nombre'], 'Ana Paz');
+    expect(creada?['notas'], 'Degradado bajo');
+  });
+
   testWidgets('nueva cita: la cuenta general elige con quién y eso viaja a la API', (t) async {
     Map<String, dynamic>? horasPedidas;
     Map<String, dynamic>? creada;
@@ -239,7 +291,9 @@ void main() {
       },
     });
     await abrir(t, red, conSesion());
-    await t.tap(find.text('Nueva cita'));
+    await t.tap(find.text('Reserva rápida'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('formulario-completo')));
     await t.pumpAndSettle();
     await t.tap(find.text('Corte clásico'));
     await t.pumpAndSettle();
@@ -318,7 +372,9 @@ void main() {
       'GET /citas/disponibilidad': (_) => ok({'dias': []}),
     });
     await abrir(t, red, conSesion());
-    await t.tap(find.text('Nueva cita'));
+    await t.tap(find.text('Reserva rápida'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('formulario-completo')));
     await t.pumpAndSettle();
     await t.tap(find.text('Corte clásico'));
     await t.pumpAndSettle();
@@ -487,7 +543,9 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('Mi mes'));
     await t.pumpAndSettle();
-    expect(find.text('42'), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('kpi-citas')), matching: find.text('42')), findsOneWidget);
+    expect(find.byKey(const Key('metas-mes')), findsOneWidget);
+    expect(find.text('¡Superaste el mes pasado!'), findsOneWidget);
     expect(find.text('Mes anterior: 30'), findsOneWidget);
     expect(find.text('2 reservas esperan tu respuesta.'), findsOneWidget);
     await t.scrollUntilVisible(find.text('Espera en la barbería'), 200);

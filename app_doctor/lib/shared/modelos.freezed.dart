@@ -1092,7 +1092,8 @@ mixin _$Cita {
  String? get llegadaEn; ProfesionalRef? get profesional;/// Precios en céntimos. El ofrecido lo propone el cliente (precio ofertable); el acordado lo fija el negocio.
  int? get precioReferencia; int? get precioOfrecido; int? get precioAcordado; String? get precioTexto;/// Solo en /citas/recordatorios: el WhatsApp con el recordatorio ya escrito.
  String? get whatsappUrl; TratamientoRef get tratamiento; PacienteRef get paciente;/// Cupón que el cliente eligió al reservar desde la app.
- CuponCita? get cupon;
+ CuponCita? get cupon;/// Lo que pidió en detalle («corte en capas, traigo foto»).
+ String get notas;
 /// Create a copy of Cita
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1105,16 +1106,16 @@ $CitaCopyWith<Cita> get copyWith => _$CitaCopyWithImpl<Cita>(this as Cita, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Cita&&(identical(other.id, id) || other.id == id)&&(identical(other.estado, estado) || other.estado == estado)&&(identical(other.estadoTexto, estadoTexto) || other.estadoTexto == estadoTexto)&&(identical(other.origen, origen) || other.origen == origen)&&(identical(other.inicio, inicio) || other.inicio == inicio)&&(identical(other.fin, fin) || other.fin == fin)&&(identical(other.inicioEstimado, inicioEstimado) || other.inicioEstimado == inicioEstimado)&&(identical(other.finEstimado, finEstimado) || other.finEstimado == finEstimado)&&(identical(other.retrasoMin, retrasoMin) || other.retrasoMin == retrasoMin)&&(identical(other.minutosExtra, minutosExtra) || other.minutosExtra == minutosExtra)&&(identical(other.inicioReal, inicioReal) || other.inicioReal == inicioReal)&&(identical(other.finReal, finReal) || other.finReal == finReal)&&(identical(other.recordatorioEnviadoEn, recordatorioEnviadoEn) || other.recordatorioEnviadoEn == recordatorioEnviadoEn)&&(identical(other.asistenciaConfirmada, asistenciaConfirmada) || other.asistenciaConfirmada == asistenciaConfirmada)&&(identical(other.llegadaEn, llegadaEn) || other.llegadaEn == llegadaEn)&&(identical(other.profesional, profesional) || other.profesional == profesional)&&(identical(other.precioReferencia, precioReferencia) || other.precioReferencia == precioReferencia)&&(identical(other.precioOfrecido, precioOfrecido) || other.precioOfrecido == precioOfrecido)&&(identical(other.precioAcordado, precioAcordado) || other.precioAcordado == precioAcordado)&&(identical(other.precioTexto, precioTexto) || other.precioTexto == precioTexto)&&(identical(other.whatsappUrl, whatsappUrl) || other.whatsappUrl == whatsappUrl)&&(identical(other.tratamiento, tratamiento) || other.tratamiento == tratamiento)&&(identical(other.paciente, paciente) || other.paciente == paciente)&&(identical(other.cupon, cupon) || other.cupon == cupon));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Cita&&(identical(other.id, id) || other.id == id)&&(identical(other.estado, estado) || other.estado == estado)&&(identical(other.estadoTexto, estadoTexto) || other.estadoTexto == estadoTexto)&&(identical(other.origen, origen) || other.origen == origen)&&(identical(other.inicio, inicio) || other.inicio == inicio)&&(identical(other.fin, fin) || other.fin == fin)&&(identical(other.inicioEstimado, inicioEstimado) || other.inicioEstimado == inicioEstimado)&&(identical(other.finEstimado, finEstimado) || other.finEstimado == finEstimado)&&(identical(other.retrasoMin, retrasoMin) || other.retrasoMin == retrasoMin)&&(identical(other.minutosExtra, minutosExtra) || other.minutosExtra == minutosExtra)&&(identical(other.inicioReal, inicioReal) || other.inicioReal == inicioReal)&&(identical(other.finReal, finReal) || other.finReal == finReal)&&(identical(other.recordatorioEnviadoEn, recordatorioEnviadoEn) || other.recordatorioEnviadoEn == recordatorioEnviadoEn)&&(identical(other.asistenciaConfirmada, asistenciaConfirmada) || other.asistenciaConfirmada == asistenciaConfirmada)&&(identical(other.llegadaEn, llegadaEn) || other.llegadaEn == llegadaEn)&&(identical(other.profesional, profesional) || other.profesional == profesional)&&(identical(other.precioReferencia, precioReferencia) || other.precioReferencia == precioReferencia)&&(identical(other.precioOfrecido, precioOfrecido) || other.precioOfrecido == precioOfrecido)&&(identical(other.precioAcordado, precioAcordado) || other.precioAcordado == precioAcordado)&&(identical(other.precioTexto, precioTexto) || other.precioTexto == precioTexto)&&(identical(other.whatsappUrl, whatsappUrl) || other.whatsappUrl == whatsappUrl)&&(identical(other.tratamiento, tratamiento) || other.tratamiento == tratamiento)&&(identical(other.paciente, paciente) || other.paciente == paciente)&&(identical(other.cupon, cupon) || other.cupon == cupon)&&(identical(other.notas, notas) || other.notas == notas));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,estado,estadoTexto,origen,inicio,fin,inicioEstimado,finEstimado,retrasoMin,minutosExtra,inicioReal,finReal,recordatorioEnviadoEn,asistenciaConfirmada,llegadaEn,profesional,precioReferencia,precioOfrecido,precioAcordado,precioTexto,whatsappUrl,tratamiento,paciente,cupon]);
+int get hashCode => Object.hashAll([runtimeType,id,estado,estadoTexto,origen,inicio,fin,inicioEstimado,finEstimado,retrasoMin,minutosExtra,inicioReal,finReal,recordatorioEnviadoEn,asistenciaConfirmada,llegadaEn,profesional,precioReferencia,precioOfrecido,precioAcordado,precioTexto,whatsappUrl,tratamiento,paciente,cupon,notas]);
 
 @override
 String toString() {
-  return 'Cita(id: $id, estado: $estado, estadoTexto: $estadoTexto, origen: $origen, inicio: $inicio, fin: $fin, inicioEstimado: $inicioEstimado, finEstimado: $finEstimado, retrasoMin: $retrasoMin, minutosExtra: $minutosExtra, inicioReal: $inicioReal, finReal: $finReal, recordatorioEnviadoEn: $recordatorioEnviadoEn, asistenciaConfirmada: $asistenciaConfirmada, llegadaEn: $llegadaEn, profesional: $profesional, precioReferencia: $precioReferencia, precioOfrecido: $precioOfrecido, precioAcordado: $precioAcordado, precioTexto: $precioTexto, whatsappUrl: $whatsappUrl, tratamiento: $tratamiento, paciente: $paciente, cupon: $cupon)';
+  return 'Cita(id: $id, estado: $estado, estadoTexto: $estadoTexto, origen: $origen, inicio: $inicio, fin: $fin, inicioEstimado: $inicioEstimado, finEstimado: $finEstimado, retrasoMin: $retrasoMin, minutosExtra: $minutosExtra, inicioReal: $inicioReal, finReal: $finReal, recordatorioEnviadoEn: $recordatorioEnviadoEn, asistenciaConfirmada: $asistenciaConfirmada, llegadaEn: $llegadaEn, profesional: $profesional, precioReferencia: $precioReferencia, precioOfrecido: $precioOfrecido, precioAcordado: $precioAcordado, precioTexto: $precioTexto, whatsappUrl: $whatsappUrl, tratamiento: $tratamiento, paciente: $paciente, cupon: $cupon, notas: $notas)';
 }
 
 
@@ -1125,7 +1126,7 @@ abstract mixin class $CitaCopyWith<$Res>  {
   factory $CitaCopyWith(Cita value, $Res Function(Cita) _then) = _$CitaCopyWithImpl;
 @useResult
 $Res call({
- int id, String estado, String estadoTexto, String origen, String inicio, String fin, String? inicioEstimado, String? finEstimado, int retrasoMin, int minutosExtra, String? inicioReal, String? finReal, String? recordatorioEnviadoEn, bool? asistenciaConfirmada, String? llegadaEn, ProfesionalRef? profesional, int? precioReferencia, int? precioOfrecido, int? precioAcordado, String? precioTexto, String? whatsappUrl, TratamientoRef tratamiento, PacienteRef paciente, CuponCita? cupon
+ int id, String estado, String estadoTexto, String origen, String inicio, String fin, String? inicioEstimado, String? finEstimado, int retrasoMin, int minutosExtra, String? inicioReal, String? finReal, String? recordatorioEnviadoEn, bool? asistenciaConfirmada, String? llegadaEn, ProfesionalRef? profesional, int? precioReferencia, int? precioOfrecido, int? precioAcordado, String? precioTexto, String? whatsappUrl, TratamientoRef tratamiento, PacienteRef paciente, CuponCita? cupon, String notas
 });
 
 
@@ -1142,7 +1143,7 @@ class _$CitaCopyWithImpl<$Res>
 
 /// Create a copy of Cita
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? estado = null,Object? estadoTexto = null,Object? origen = null,Object? inicio = null,Object? fin = null,Object? inicioEstimado = freezed,Object? finEstimado = freezed,Object? retrasoMin = null,Object? minutosExtra = null,Object? inicioReal = freezed,Object? finReal = freezed,Object? recordatorioEnviadoEn = freezed,Object? asistenciaConfirmada = freezed,Object? llegadaEn = freezed,Object? profesional = freezed,Object? precioReferencia = freezed,Object? precioOfrecido = freezed,Object? precioAcordado = freezed,Object? precioTexto = freezed,Object? whatsappUrl = freezed,Object? tratamiento = null,Object? paciente = null,Object? cupon = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? estado = null,Object? estadoTexto = null,Object? origen = null,Object? inicio = null,Object? fin = null,Object? inicioEstimado = freezed,Object? finEstimado = freezed,Object? retrasoMin = null,Object? minutosExtra = null,Object? inicioReal = freezed,Object? finReal = freezed,Object? recordatorioEnviadoEn = freezed,Object? asistenciaConfirmada = freezed,Object? llegadaEn = freezed,Object? profesional = freezed,Object? precioReferencia = freezed,Object? precioOfrecido = freezed,Object? precioAcordado = freezed,Object? precioTexto = freezed,Object? whatsappUrl = freezed,Object? tratamiento = null,Object? paciente = null,Object? cupon = freezed,Object? notas = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,estado: null == estado ? _self.estado : estado // ignore: cast_nullable_to_non_nullable
@@ -1168,7 +1169,8 @@ as String?,whatsappUrl: freezed == whatsappUrl ? _self.whatsappUrl : whatsappUrl
 as String?,tratamiento: null == tratamiento ? _self.tratamiento : tratamiento // ignore: cast_nullable_to_non_nullable
 as TratamientoRef,paciente: null == paciente ? _self.paciente : paciente // ignore: cast_nullable_to_non_nullable
 as PacienteRef,cupon: freezed == cupon ? _self.cupon : cupon // ignore: cast_nullable_to_non_nullable
-as CuponCita?,
+as CuponCita?,notas: null == notas ? _self.notas : notas // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 /// Create a copy of Cita
@@ -1295,10 +1297,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String estado,  String estadoTexto,  String origen,  String inicio,  String fin,  String? inicioEstimado,  String? finEstimado,  int retrasoMin,  int minutosExtra,  String? inicioReal,  String? finReal,  String? recordatorioEnviadoEn,  bool? asistenciaConfirmada,  String? llegadaEn,  ProfesionalRef? profesional,  int? precioReferencia,  int? precioOfrecido,  int? precioAcordado,  String? precioTexto,  String? whatsappUrl,  TratamientoRef tratamiento,  PacienteRef paciente,  CuponCita? cupon)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String estado,  String estadoTexto,  String origen,  String inicio,  String fin,  String? inicioEstimado,  String? finEstimado,  int retrasoMin,  int minutosExtra,  String? inicioReal,  String? finReal,  String? recordatorioEnviadoEn,  bool? asistenciaConfirmada,  String? llegadaEn,  ProfesionalRef? profesional,  int? precioReferencia,  int? precioOfrecido,  int? precioAcordado,  String? precioTexto,  String? whatsappUrl,  TratamientoRef tratamiento,  PacienteRef paciente,  CuponCita? cupon,  String notas)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Cita() when $default != null:
-return $default(_that.id,_that.estado,_that.estadoTexto,_that.origen,_that.inicio,_that.fin,_that.inicioEstimado,_that.finEstimado,_that.retrasoMin,_that.minutosExtra,_that.inicioReal,_that.finReal,_that.recordatorioEnviadoEn,_that.asistenciaConfirmada,_that.llegadaEn,_that.profesional,_that.precioReferencia,_that.precioOfrecido,_that.precioAcordado,_that.precioTexto,_that.whatsappUrl,_that.tratamiento,_that.paciente,_that.cupon);case _:
+return $default(_that.id,_that.estado,_that.estadoTexto,_that.origen,_that.inicio,_that.fin,_that.inicioEstimado,_that.finEstimado,_that.retrasoMin,_that.minutosExtra,_that.inicioReal,_that.finReal,_that.recordatorioEnviadoEn,_that.asistenciaConfirmada,_that.llegadaEn,_that.profesional,_that.precioReferencia,_that.precioOfrecido,_that.precioAcordado,_that.precioTexto,_that.whatsappUrl,_that.tratamiento,_that.paciente,_that.cupon,_that.notas);case _:
   return orElse();
 
 }
@@ -1316,10 +1318,10 @@ return $default(_that.id,_that.estado,_that.estadoTexto,_that.origen,_that.inici
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String estado,  String estadoTexto,  String origen,  String inicio,  String fin,  String? inicioEstimado,  String? finEstimado,  int retrasoMin,  int minutosExtra,  String? inicioReal,  String? finReal,  String? recordatorioEnviadoEn,  bool? asistenciaConfirmada,  String? llegadaEn,  ProfesionalRef? profesional,  int? precioReferencia,  int? precioOfrecido,  int? precioAcordado,  String? precioTexto,  String? whatsappUrl,  TratamientoRef tratamiento,  PacienteRef paciente,  CuponCita? cupon)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String estado,  String estadoTexto,  String origen,  String inicio,  String fin,  String? inicioEstimado,  String? finEstimado,  int retrasoMin,  int minutosExtra,  String? inicioReal,  String? finReal,  String? recordatorioEnviadoEn,  bool? asistenciaConfirmada,  String? llegadaEn,  ProfesionalRef? profesional,  int? precioReferencia,  int? precioOfrecido,  int? precioAcordado,  String? precioTexto,  String? whatsappUrl,  TratamientoRef tratamiento,  PacienteRef paciente,  CuponCita? cupon,  String notas)  $default,) {final _that = this;
 switch (_that) {
 case _Cita():
-return $default(_that.id,_that.estado,_that.estadoTexto,_that.origen,_that.inicio,_that.fin,_that.inicioEstimado,_that.finEstimado,_that.retrasoMin,_that.minutosExtra,_that.inicioReal,_that.finReal,_that.recordatorioEnviadoEn,_that.asistenciaConfirmada,_that.llegadaEn,_that.profesional,_that.precioReferencia,_that.precioOfrecido,_that.precioAcordado,_that.precioTexto,_that.whatsappUrl,_that.tratamiento,_that.paciente,_that.cupon);case _:
+return $default(_that.id,_that.estado,_that.estadoTexto,_that.origen,_that.inicio,_that.fin,_that.inicioEstimado,_that.finEstimado,_that.retrasoMin,_that.minutosExtra,_that.inicioReal,_that.finReal,_that.recordatorioEnviadoEn,_that.asistenciaConfirmada,_that.llegadaEn,_that.profesional,_that.precioReferencia,_that.precioOfrecido,_that.precioAcordado,_that.precioTexto,_that.whatsappUrl,_that.tratamiento,_that.paciente,_that.cupon,_that.notas);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1336,10 +1338,10 @@ return $default(_that.id,_that.estado,_that.estadoTexto,_that.origen,_that.inici
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String estado,  String estadoTexto,  String origen,  String inicio,  String fin,  String? inicioEstimado,  String? finEstimado,  int retrasoMin,  int minutosExtra,  String? inicioReal,  String? finReal,  String? recordatorioEnviadoEn,  bool? asistenciaConfirmada,  String? llegadaEn,  ProfesionalRef? profesional,  int? precioReferencia,  int? precioOfrecido,  int? precioAcordado,  String? precioTexto,  String? whatsappUrl,  TratamientoRef tratamiento,  PacienteRef paciente,  CuponCita? cupon)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String estado,  String estadoTexto,  String origen,  String inicio,  String fin,  String? inicioEstimado,  String? finEstimado,  int retrasoMin,  int minutosExtra,  String? inicioReal,  String? finReal,  String? recordatorioEnviadoEn,  bool? asistenciaConfirmada,  String? llegadaEn,  ProfesionalRef? profesional,  int? precioReferencia,  int? precioOfrecido,  int? precioAcordado,  String? precioTexto,  String? whatsappUrl,  TratamientoRef tratamiento,  PacienteRef paciente,  CuponCita? cupon,  String notas)?  $default,) {final _that = this;
 switch (_that) {
 case _Cita() when $default != null:
-return $default(_that.id,_that.estado,_that.estadoTexto,_that.origen,_that.inicio,_that.fin,_that.inicioEstimado,_that.finEstimado,_that.retrasoMin,_that.minutosExtra,_that.inicioReal,_that.finReal,_that.recordatorioEnviadoEn,_that.asistenciaConfirmada,_that.llegadaEn,_that.profesional,_that.precioReferencia,_that.precioOfrecido,_that.precioAcordado,_that.precioTexto,_that.whatsappUrl,_that.tratamiento,_that.paciente,_that.cupon);case _:
+return $default(_that.id,_that.estado,_that.estadoTexto,_that.origen,_that.inicio,_that.fin,_that.inicioEstimado,_that.finEstimado,_that.retrasoMin,_that.minutosExtra,_that.inicioReal,_that.finReal,_that.recordatorioEnviadoEn,_that.asistenciaConfirmada,_that.llegadaEn,_that.profesional,_that.precioReferencia,_that.precioOfrecido,_that.precioAcordado,_that.precioTexto,_that.whatsappUrl,_that.tratamiento,_that.paciente,_that.cupon,_that.notas);case _:
   return null;
 
 }
@@ -1351,7 +1353,7 @@ return $default(_that.id,_that.estado,_that.estadoTexto,_that.origen,_that.inici
 @JsonSerializable()
 
 class _Cita extends Cita {
-  const _Cita({required this.id, required this.estado, required this.estadoTexto, this.origen = 'web', required this.inicio, required this.fin, this.inicioEstimado, this.finEstimado, this.retrasoMin = 0, this.minutosExtra = 0, this.inicioReal, this.finReal, this.recordatorioEnviadoEn, this.asistenciaConfirmada, this.llegadaEn, this.profesional, this.precioReferencia, this.precioOfrecido, this.precioAcordado, this.precioTexto, this.whatsappUrl, required this.tratamiento, required this.paciente, this.cupon}): super._();
+  const _Cita({required this.id, required this.estado, required this.estadoTexto, this.origen = 'web', required this.inicio, required this.fin, this.inicioEstimado, this.finEstimado, this.retrasoMin = 0, this.minutosExtra = 0, this.inicioReal, this.finReal, this.recordatorioEnviadoEn, this.asistenciaConfirmada, this.llegadaEn, this.profesional, this.precioReferencia, this.precioOfrecido, this.precioAcordado, this.precioTexto, this.whatsappUrl, required this.tratamiento, required this.paciente, this.cupon, this.notas = ''}): super._();
   factory _Cita.fromJson(Map<String, dynamic> json) => _$CitaFromJson(json);
 
 @override final  int id;
@@ -1382,6 +1384,8 @@ class _Cita extends Cita {
 @override final  PacienteRef paciente;
 /// Cupón que el cliente eligió al reservar desde la app.
 @override final  CuponCita? cupon;
+/// Lo que pidió en detalle («corte en capas, traigo foto»).
+@override@JsonKey() final  String notas;
 
 /// Create a copy of Cita
 /// with the given fields replaced by the non-null parameter values.
@@ -1396,16 +1400,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Cita&&(identical(other.id, id) || other.id == id)&&(identical(other.estado, estado) || other.estado == estado)&&(identical(other.estadoTexto, estadoTexto) || other.estadoTexto == estadoTexto)&&(identical(other.origen, origen) || other.origen == origen)&&(identical(other.inicio, inicio) || other.inicio == inicio)&&(identical(other.fin, fin) || other.fin == fin)&&(identical(other.inicioEstimado, inicioEstimado) || other.inicioEstimado == inicioEstimado)&&(identical(other.finEstimado, finEstimado) || other.finEstimado == finEstimado)&&(identical(other.retrasoMin, retrasoMin) || other.retrasoMin == retrasoMin)&&(identical(other.minutosExtra, minutosExtra) || other.minutosExtra == minutosExtra)&&(identical(other.inicioReal, inicioReal) || other.inicioReal == inicioReal)&&(identical(other.finReal, finReal) || other.finReal == finReal)&&(identical(other.recordatorioEnviadoEn, recordatorioEnviadoEn) || other.recordatorioEnviadoEn == recordatorioEnviadoEn)&&(identical(other.asistenciaConfirmada, asistenciaConfirmada) || other.asistenciaConfirmada == asistenciaConfirmada)&&(identical(other.llegadaEn, llegadaEn) || other.llegadaEn == llegadaEn)&&(identical(other.profesional, profesional) || other.profesional == profesional)&&(identical(other.precioReferencia, precioReferencia) || other.precioReferencia == precioReferencia)&&(identical(other.precioOfrecido, precioOfrecido) || other.precioOfrecido == precioOfrecido)&&(identical(other.precioAcordado, precioAcordado) || other.precioAcordado == precioAcordado)&&(identical(other.precioTexto, precioTexto) || other.precioTexto == precioTexto)&&(identical(other.whatsappUrl, whatsappUrl) || other.whatsappUrl == whatsappUrl)&&(identical(other.tratamiento, tratamiento) || other.tratamiento == tratamiento)&&(identical(other.paciente, paciente) || other.paciente == paciente)&&(identical(other.cupon, cupon) || other.cupon == cupon));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Cita&&(identical(other.id, id) || other.id == id)&&(identical(other.estado, estado) || other.estado == estado)&&(identical(other.estadoTexto, estadoTexto) || other.estadoTexto == estadoTexto)&&(identical(other.origen, origen) || other.origen == origen)&&(identical(other.inicio, inicio) || other.inicio == inicio)&&(identical(other.fin, fin) || other.fin == fin)&&(identical(other.inicioEstimado, inicioEstimado) || other.inicioEstimado == inicioEstimado)&&(identical(other.finEstimado, finEstimado) || other.finEstimado == finEstimado)&&(identical(other.retrasoMin, retrasoMin) || other.retrasoMin == retrasoMin)&&(identical(other.minutosExtra, minutosExtra) || other.minutosExtra == minutosExtra)&&(identical(other.inicioReal, inicioReal) || other.inicioReal == inicioReal)&&(identical(other.finReal, finReal) || other.finReal == finReal)&&(identical(other.recordatorioEnviadoEn, recordatorioEnviadoEn) || other.recordatorioEnviadoEn == recordatorioEnviadoEn)&&(identical(other.asistenciaConfirmada, asistenciaConfirmada) || other.asistenciaConfirmada == asistenciaConfirmada)&&(identical(other.llegadaEn, llegadaEn) || other.llegadaEn == llegadaEn)&&(identical(other.profesional, profesional) || other.profesional == profesional)&&(identical(other.precioReferencia, precioReferencia) || other.precioReferencia == precioReferencia)&&(identical(other.precioOfrecido, precioOfrecido) || other.precioOfrecido == precioOfrecido)&&(identical(other.precioAcordado, precioAcordado) || other.precioAcordado == precioAcordado)&&(identical(other.precioTexto, precioTexto) || other.precioTexto == precioTexto)&&(identical(other.whatsappUrl, whatsappUrl) || other.whatsappUrl == whatsappUrl)&&(identical(other.tratamiento, tratamiento) || other.tratamiento == tratamiento)&&(identical(other.paciente, paciente) || other.paciente == paciente)&&(identical(other.cupon, cupon) || other.cupon == cupon)&&(identical(other.notas, notas) || other.notas == notas));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,estado,estadoTexto,origen,inicio,fin,inicioEstimado,finEstimado,retrasoMin,minutosExtra,inicioReal,finReal,recordatorioEnviadoEn,asistenciaConfirmada,llegadaEn,profesional,precioReferencia,precioOfrecido,precioAcordado,precioTexto,whatsappUrl,tratamiento,paciente,cupon]);
+int get hashCode => Object.hashAll([runtimeType,id,estado,estadoTexto,origen,inicio,fin,inicioEstimado,finEstimado,retrasoMin,minutosExtra,inicioReal,finReal,recordatorioEnviadoEn,asistenciaConfirmada,llegadaEn,profesional,precioReferencia,precioOfrecido,precioAcordado,precioTexto,whatsappUrl,tratamiento,paciente,cupon,notas]);
 
 @override
 String toString() {
-  return 'Cita(id: $id, estado: $estado, estadoTexto: $estadoTexto, origen: $origen, inicio: $inicio, fin: $fin, inicioEstimado: $inicioEstimado, finEstimado: $finEstimado, retrasoMin: $retrasoMin, minutosExtra: $minutosExtra, inicioReal: $inicioReal, finReal: $finReal, recordatorioEnviadoEn: $recordatorioEnviadoEn, asistenciaConfirmada: $asistenciaConfirmada, llegadaEn: $llegadaEn, profesional: $profesional, precioReferencia: $precioReferencia, precioOfrecido: $precioOfrecido, precioAcordado: $precioAcordado, precioTexto: $precioTexto, whatsappUrl: $whatsappUrl, tratamiento: $tratamiento, paciente: $paciente, cupon: $cupon)';
+  return 'Cita(id: $id, estado: $estado, estadoTexto: $estadoTexto, origen: $origen, inicio: $inicio, fin: $fin, inicioEstimado: $inicioEstimado, finEstimado: $finEstimado, retrasoMin: $retrasoMin, minutosExtra: $minutosExtra, inicioReal: $inicioReal, finReal: $finReal, recordatorioEnviadoEn: $recordatorioEnviadoEn, asistenciaConfirmada: $asistenciaConfirmada, llegadaEn: $llegadaEn, profesional: $profesional, precioReferencia: $precioReferencia, precioOfrecido: $precioOfrecido, precioAcordado: $precioAcordado, precioTexto: $precioTexto, whatsappUrl: $whatsappUrl, tratamiento: $tratamiento, paciente: $paciente, cupon: $cupon, notas: $notas)';
 }
 
 
@@ -1416,7 +1420,7 @@ abstract mixin class _$CitaCopyWith<$Res> implements $CitaCopyWith<$Res> {
   factory _$CitaCopyWith(_Cita value, $Res Function(_Cita) _then) = __$CitaCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String estado, String estadoTexto, String origen, String inicio, String fin, String? inicioEstimado, String? finEstimado, int retrasoMin, int minutosExtra, String? inicioReal, String? finReal, String? recordatorioEnviadoEn, bool? asistenciaConfirmada, String? llegadaEn, ProfesionalRef? profesional, int? precioReferencia, int? precioOfrecido, int? precioAcordado, String? precioTexto, String? whatsappUrl, TratamientoRef tratamiento, PacienteRef paciente, CuponCita? cupon
+ int id, String estado, String estadoTexto, String origen, String inicio, String fin, String? inicioEstimado, String? finEstimado, int retrasoMin, int minutosExtra, String? inicioReal, String? finReal, String? recordatorioEnviadoEn, bool? asistenciaConfirmada, String? llegadaEn, ProfesionalRef? profesional, int? precioReferencia, int? precioOfrecido, int? precioAcordado, String? precioTexto, String? whatsappUrl, TratamientoRef tratamiento, PacienteRef paciente, CuponCita? cupon, String notas
 });
 
 
@@ -1433,7 +1437,7 @@ class __$CitaCopyWithImpl<$Res>
 
 /// Create a copy of Cita
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? estado = null,Object? estadoTexto = null,Object? origen = null,Object? inicio = null,Object? fin = null,Object? inicioEstimado = freezed,Object? finEstimado = freezed,Object? retrasoMin = null,Object? minutosExtra = null,Object? inicioReal = freezed,Object? finReal = freezed,Object? recordatorioEnviadoEn = freezed,Object? asistenciaConfirmada = freezed,Object? llegadaEn = freezed,Object? profesional = freezed,Object? precioReferencia = freezed,Object? precioOfrecido = freezed,Object? precioAcordado = freezed,Object? precioTexto = freezed,Object? whatsappUrl = freezed,Object? tratamiento = null,Object? paciente = null,Object? cupon = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? estado = null,Object? estadoTexto = null,Object? origen = null,Object? inicio = null,Object? fin = null,Object? inicioEstimado = freezed,Object? finEstimado = freezed,Object? retrasoMin = null,Object? minutosExtra = null,Object? inicioReal = freezed,Object? finReal = freezed,Object? recordatorioEnviadoEn = freezed,Object? asistenciaConfirmada = freezed,Object? llegadaEn = freezed,Object? profesional = freezed,Object? precioReferencia = freezed,Object? precioOfrecido = freezed,Object? precioAcordado = freezed,Object? precioTexto = freezed,Object? whatsappUrl = freezed,Object? tratamiento = null,Object? paciente = null,Object? cupon = freezed,Object? notas = null,}) {
   return _then(_Cita(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,estado: null == estado ? _self.estado : estado // ignore: cast_nullable_to_non_nullable
@@ -1459,7 +1463,8 @@ as String?,whatsappUrl: freezed == whatsappUrl ? _self.whatsappUrl : whatsappUrl
 as String?,tratamiento: null == tratamiento ? _self.tratamiento : tratamiento // ignore: cast_nullable_to_non_nullable
 as TratamientoRef,paciente: null == paciente ? _self.paciente : paciente // ignore: cast_nullable_to_non_nullable
 as PacienteRef,cupon: freezed == cupon ? _self.cupon : cupon // ignore: cast_nullable_to_non_nullable
-as CuponCita?,
+as CuponCita?,notas: null == notas ? _self.notas : notas // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 

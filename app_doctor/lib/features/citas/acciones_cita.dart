@@ -7,6 +7,8 @@ import '../../core/api.dart';
 import '../../core/fechas.dart';
 import '../../core/negocio.dart';
 import '../../shared/comunes.dart';
+import '../../shared/diseno/notas.dart';
+import '../../shared/diseno/vidrio.dart';
 import '../../shared/modelos.dart';
 import '../agenda/agenda_controlador.dart';
 import 'selector_hora.dart';
@@ -47,6 +49,11 @@ Future<void> mostrarAccionesCita(
               ),
               subtitle: Text(detalle),
             ),
+            if (cita.notas.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: NotaCita(cita.notas),
+              ),
             const Divider(height: 1),
             if (cita.porAprobar)
               ListTile(
@@ -67,6 +74,13 @@ Future<void> mostrarAccionesCita(
                 subtitle: Text('Ya está en ${voc.elLocal}'),
                 onTap: () => Navigator.pop(hoja, 'llego'),
               ),
+            ListTile(
+              key: const Key('editar-notas'),
+              leading: const Icon(Icons.sticky_note_2_outlined),
+              title: Text(cita.notas.isEmpty ? 'Agregar notas' : 'Editar notas'),
+              subtitle: const Text('Lo que pidió o lo que debes recordar'),
+              onTap: () => Navigator.pop(hoja, 'notas'),
+            ),
             ListTile(
               leading: const Icon(Icons.chat_outlined),
               title: const Text('Escribir por WhatsApp'),
@@ -114,6 +128,8 @@ Future<void> mostrarAccionesCita(
         'Reserva rechazada',
         alCambiar: alCambiar,
       );
+    case 'notas':
+      await editarNotasCita(context, ref, cita, alCambiar: alCambiar);
     case 'whatsapp':
       await abrirWhatsapp(
         context,
@@ -304,6 +320,44 @@ Future<void> _ejecutar(
     final url = datos['whatsapp_url'] as String?;
     if (directo && url != null) return abrirWhatsapp(context, url);
     await ofrecerAviso(context, titulo, url, siguientes: siguientesDe(datos));
+  } on ApiError catch (e) {
+    if (context.mounted) avisar(context, e.mensaje);
+  }
+}
+
+/// Hoja para escribir o corregir las notas de una cita (PUT /citas/{id}/notas). El texto no viaja en avisos ni logs.
+Future<void> editarNotasCita(BuildContext context, WidgetRef ref, Cita cita, {VoidCallback? alCambiar}) async {
+  final controlador = TextEditingController(text: cita.notas);
+  final rubro = ref.read(negocioActualProvider).rubro;
+  final guardar = await mostrarHojaVidrio<bool>(
+    context,
+    builder: (hoja) => SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Notas de ${cita.paciente.nombre}', style: Theme.of(hoja).textTheme.titleLarge),
+          const SizedBox(height: 12),
+          CampoNotas(controlador: controlador, rubro: rubro),
+          const SizedBox(height: 16),
+          FilledButton(
+            key: const Key('guardar-notas'),
+            onPressed: () => Navigator.pop(hoja, true),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    ),
+  );
+  // Sin dispose inmediato: la hoja aún se anima al cerrarse y usa el controlador.
+  final texto = controlador.text.trim();
+  if (guardar != true || !context.mounted) return;
+  try {
+    await ref.read(apiProvider).put('/citas/${cita.id}/notas', {'notas': texto});
+    await ref.read(agendaProvider.notifier).refrescar();
+    alCambiar?.call();
+    if (context.mounted) avisar(context, 'Notas guardadas');
   } on ApiError catch (e) {
     if (context.mounted) avisar(context, e.mensaje);
   }

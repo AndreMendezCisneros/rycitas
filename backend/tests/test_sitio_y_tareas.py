@@ -242,7 +242,7 @@ def test_programar_tareas_es_idempotente_y_no_adelanta_el_resumen(db):
     primera = Schedule.objects.get(name="resumen-diario").next_run
     assert primera.astimezone(AHORA.tzinfo).hour == 20
     call_command("programar_tareas", stdout=mock.Mock())
-    assert Schedule.objects.count() == 6
+    assert Schedule.objects.count() == 7
     assert Schedule.objects.get(name="resumen-diario").next_run == primera
 
 

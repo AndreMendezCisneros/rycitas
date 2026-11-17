@@ -17,7 +17,7 @@ from ninja import Router, Schema
 from agenda.models import Tratamiento
 from citas import presentacion, servicios
 from citas.models import Cita, Estado, Paciente
-from clientes import autenticacion, fidelidad
+from clientes import autenticacion, fidelidad, logros as gamificacion
 from clientes.models import Cliente, Cupon, CuponUsado, DispositivoCliente
 from consultorios.models import Consultorio
 from consultorios.rubros import RUBRO_CHOICES
@@ -70,6 +70,7 @@ class ReservaEntrada(Schema):
     inicio: datetime
     profesional: int | None = None
     cupon: int | None = None
+    notas: str = ""
 
 
 class VincularEntrada(Schema):
@@ -343,7 +344,14 @@ def reservar(request, slug: str, datos: ReservaEntrada):
             raise ErrorNegocio("cupon_otro_servicio", f"Este cupón es solo para {cupon.tratamiento.nombre}.", 422)
     with transaction.atomic():
         cita = servicios.crear_prerreserva(
-            c, tratamiento, datos.inicio, cliente.nombre, cliente.celular, True, profesional_id=datos.profesional
+            c,
+            tratamiento,
+            datos.inicio,
+            cliente.nombre,
+            cliente.celular,
+            True,
+            profesional_id=datos.profesional,
+            notas=datos.notas,
         )
         if cupon is not None:
             CuponUsado.objects.create(cupon=cupon, cita=cita, celular=cliente.celular)
@@ -374,6 +382,7 @@ def _cita_cliente(cita: Cita) -> dict:
         "id": cita.pk,
         "negocio": {"slug": cita.consultorio.slug, "nombre": cita.consultorio.nombre},
         "enlace": f"/c/{cita.token_gestion}/",
+        "notas": cita.notas,
         "cupon": fidelidad.cupon_publico(cupon.cupon) if cupon else None,
     }
 
@@ -393,6 +402,12 @@ def mis_citas(request):
     proximas = consulta.filter(estado__in=activos, fin__gte=ahora).order_by("inicio")[:30]
     pasadas = consulta.exclude(pk__in=[c.pk for c in proximas]).order_by("-inicio")[:30]
     return {"proximas": [_cita_cliente(c) for c in proximas], "pasadas": [_cita_cliente(c) for c in pasadas]}
+
+
+@router.get("/logros")
+def logros(request):
+    """Logros, racha, puntos y nivel: el progreso del cliente en todos sus lugares."""
+    return gamificacion.resumen(request.auth, _celular_confiable(request.auth))
 
 
 @router.get("/beneficios")

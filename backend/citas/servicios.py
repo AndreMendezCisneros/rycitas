@@ -55,6 +55,17 @@ def normalizar_celular(valor: str) -> str:
     return f"+51{coincidencia.group(1)}"
 
 
+MAX_NOTAS = 500
+_ETIQUETA = re.compile(r"<[^>]*>")
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def limpiar_notas(notas: str | None) -> str:
+    """Las notas del cliente son texto plano: sin etiquetas HTML ni caracteres de control, y como mucho 500."""
+    texto = _CONTROL.sub("", _ETIQUETA.sub("", notas or "")).strip()
+    return texto[:MAX_NOTAS]
+
+
 def _validar_nombre(nombre: str) -> str:
     nombre = " ".join((nombre or "").split())
     if len(nombre) < 2 or len(nombre) > 120:
@@ -381,6 +392,7 @@ def crear_prerreserva(
     profesional_id: int | None = None,
     precio_ofrecido: float | None = None,
     acepta_publicidad: bool = False,
+    notas: str = "",
 ) -> Cita:
     """Retiene el horario 15 min (RF-08). Si dos llegan a la vez, la restricción de la base elige a una.
 
@@ -449,6 +461,7 @@ def crear_prerreserva(
                         estado=estado,
                         origen=Origen.WEB,
                         nombre_ingresado=nombre,
+                        notas=limpiar_notas(notas),
                         codigo=_nuevo_codigo() if verificar else "",
                         expira_en=ahora + timedelta(minutes=settings.MINUTOS_PRERRESERVA) if verificar else None,
                         token_gestion=secrets.token_urlsafe(32),
@@ -571,9 +584,10 @@ def _mover(cita: Cita, inicio: datetime, params: ParametrosReserva, usuario: Usu
     _exigir_paciente_libre(cita.paciente, inicio, fin, excluir_cita=cita.pk)
     cita.inicio, cita.fin = inicio, fin
     cita.fin_ocupado = fin + timedelta(minutes=params.margen_min)
+    cita.aviso_cliente_24h_en = cita.aviso_cliente_2h_en = None
     try:
         with transaction.atomic():
-            cita.save(update_fields=["inicio", "fin", "fin_ocupado"])
+            cita.save(update_fields=["inicio", "fin", "fin_ocupado", "aviso_cliente_24h_en", "aviso_cliente_2h_en"])
     except IntegrityError as error:
         raise _horario_tomado() from error
     _evento(cita, "reprogramacion", anterior.isoformat(), inicio.isoformat(), usuario)
@@ -594,6 +608,7 @@ def crear_cita_doctor(
     nombre: str,
     celular: str,
     profesional_id: int | None = None,
+    notas: str = "",
 ) -> Cita:
     """Cita por teléfono (RF-23): sin verificación, pero con las mismas horas libres que la web."""
     nombre = _validar_nombre(nombre)
@@ -625,6 +640,7 @@ def crear_cita_doctor(
                     estado=Estado.PROGRAMADA,
                     origen=Origen.DOCTOR,
                     nombre_ingresado=nombre,
+                    notas=limpiar_notas(notas),
                     token_gestion=secrets.token_urlsafe(32),
                 )
         except IntegrityError as error:
@@ -776,9 +792,12 @@ def marcar_no_asistio(consultorio: Consultorio, usuario: Usuario, cita_id: int) 
 
 
 def cancelar_por_doctor(consultorio: Consultorio, usuario: Usuario, cita_id: int) -> Cita:
+    from clientes import avisos
+
     with transaction.atomic():
         cita = _bloquear_cita(consultorio, cita_id, usuario)
         _cambiar_estado(cita, Estado.CANCELADA, usuario)
+        avisos.de_cita(cita, "cancelada")
     return cita
 
 
@@ -796,6 +815,9 @@ def aprobar(consultorio: Consultorio, usuario: Usuario, cita_id: int, precio_aco
         _cambiar_estado(cita, Estado.PROGRAMADA, usuario, precio_acordado=acordado)
         if acordado is not None and acordado != cita.precio_ofrecido:
             _evento(cita, "precio", soles(cita.precio_ofrecido or cita.precio_referencia), soles(acordado), usuario)
+        from clientes import avisos
+
+        avisos.de_cita(cita, "confirmada")
     return cita
 
 
@@ -805,6 +827,9 @@ def rechazar(consultorio: Consultorio, usuario: Usuario, cita_id: int) -> Cita:
         if cita.estado != Estado.POR_APROBAR:
             raise ErrorNegocio("transicion_invalida", "Esta reserva ya no está por aprobar.", 409, estado=cita.estado)
         _cambiar_estado(cita, Estado.CANCELADA, usuario)
+        from clientes import avisos
+
+        avisos.de_cita(cita, "rechazada")
     return cita
 
 
@@ -818,6 +843,19 @@ def reprogramar_por_doctor(consultorio: Consultorio, usuario: Usuario, cita_id: 
             consultorio, cita.tratamiento, inicio, para_doctor=True, excluir_cita=cita.pk, profesional=cita.profesional
         )
         _mover(cita, inicio, params, usuario)
+        from clientes import avisos
+
+        avisos.de_cita(cita, "movida")
+    return cita
+
+
+def editar_notas(consultorio: Consultorio, usuario: Usuario, cita_id: int, notas: str) -> Cita:
+    """El negocio completa o corrige lo que pidió el cliente (p. ej. lo que le dijo por teléfono)."""
+    with transaction.atomic():
+        cita = _bloquear_cita(consultorio, cita_id, usuario)
+        cita.notas = limpiar_notas(notas)
+        cita.save(update_fields=["notas"])
+        _evento(cita, "notas", "", "editadas", usuario)  # el texto no se copia al historial (DAT-05)
     return cita
 
 

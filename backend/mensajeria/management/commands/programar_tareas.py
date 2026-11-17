@@ -22,6 +22,7 @@ class Command(BaseCommand):
             ("reintentar-avisos", "mensajeria.tareas.reintentar_avisos", Schedule.MINUTES, 1, timezone.now()),
             ("recordar-pendientes", "mensajeria.tareas.recordar_pendientes", Schedule.MINUTES, 30, timezone.now()),
             ("recordar-citas", "mensajeria.tareas.recordar_citas_proximas", Schedule.MINUTES, 5, timezone.now()),
+            ("recordar-clientes", "clientes.avisos.recordar_citas", Schedule.MINUTES, 5, timezone.now()),
             ("resumen-diario", "mensajeria.tareas.resumen_diario", Schedule.DAILY, None, _proxima(time(20, 0))),
             ("limpieza-diaria", "mensajeria.tareas.limpieza_diaria", Schedule.DAILY, None, _proxima(time(3, 30))),
         ]

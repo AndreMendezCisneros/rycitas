@@ -7,8 +7,12 @@ import '../../core/fechas.dart';
 import '../../core/negocio.dart';
 import '../../core/tema.dart';
 import '../../shared/comunes.dart';
+import '../../shared/diseno/movimiento.dart';
+import '../../shared/diseno/notas.dart';
+import '../../shared/diseno/paleta.dart';
 import '../../shared/modelos.dart';
 import '../citas/acciones_cita.dart';
+import '../citas/reserva_rapida.dart';
 import 'agenda_controlador.dart';
 
 class HoyPantalla extends ConsumerWidget {
@@ -51,9 +55,10 @@ class HoyPantalla extends ConsumerWidget {
       floatingActionButton: datos == null || datos.sinConexion
           ? null
           : FloatingActionButton.extended(
-              onPressed: () => context.push('/nueva-cita'),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Nueva cita'),
+              key: const Key('fab-reserva-rapida'),
+              onPressed: () => abrirReservaRapida(context, ref),
+              icon: const Icon(Icons.bolt_rounded),
+              label: const Text('Reserva rápida'),
             ),
       body: datos != null
           ? _Contenido(estado: datos)
@@ -103,35 +108,7 @@ class _Contenido extends ConsumerWidget {
           if (agenda.citas.isNotEmpty || agenda.huecos.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TarjetaDato(
-                      valor: '$activas',
-                      etiqueta: activas == 1 ? 'cita' : 'citas',
-                      icono: Icons.event_rounded,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TarjetaDato(
-                      valor: '$atendidas',
-                      etiqueta: atendidas == 1 ? 'atendida' : 'atendidas',
-                      icono: Icons.task_alt_rounded,
-                      color: colorExito,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TarjetaDato(
-                      valor: '${agenda.huecos.length}',
-                      etiqueta: agenda.huecos.length == 1 ? 'libre' : 'libres',
-                      icono: Icons.more_time_rounded,
-                      color: const Color(0xFF0EA5E9),
-                    ),
-                  ),
-                ],
-              ),
+              child: _Resumen(activas: activas, atendidas: atendidas, libres: agenda.huecos.length),
             ),
           if (filas.isEmpty)
             const Vacio('No hay citas ni horario de atención para hoy.', icono: Icons.wb_sunny_outlined),
@@ -468,36 +445,124 @@ class _Linea extends StatelessWidget {
   }
 }
 
-class _FilaHueco extends StatelessWidget {
+/// Un espacio libre: al tocarlo (o mantenerlo pulsado) se abre la reserva rápida con esa hora ya puesta.
+class _FilaHueco extends ConsumerWidget {
   const _FilaHueco({required this.hueco});
 
   final Hueco hueco;
 
   @override
-  Widget build(BuildContext context) {
-    final esquema = Theme.of(context).colorScheme;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final inicio = Fechas.enLima(hueco.inicio);
+    void reservar() => abrirReservaRapida(
+      context,
+      ref,
+      dia: DateTime(inicio.year, inicio.month, inicio.day),
+      hora: hueco.inicio,
+    );
     return _Linea(
       hora: Fechas.hora(hueco.inicio),
-      color: esquema.outlineVariant,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
+      color: Paleta.borde,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: Key('hueco-${hueco.inicio}'),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: esquema.outlineVariant.withValues(alpha: 0.8)),
+          onTap: reservar,
+          onLongPress: reservar,
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Paleta.rosaClaro,
+              border: Border.all(color: Paleta.rosa, width: 1.4),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.more_time_rounded, size: 18, color: Paleta.frambuesa),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Libre ${Fechas.hora(hueco.inicio)} a ${Fechas.hora(hueco.fin)}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Paleta.textoSuave, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const Icon(Icons.add_circle_rounded, size: 20, color: Paleta.frambuesa),
+              ],
+            ),
+          ),
         ),
-        child: Row(
-          children: [
-            Icon(Icons.more_time_rounded, size: 18, color: esquema.onSurfaceVariant),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Libre ${Fechas.hora(hueco.inicio)} a ${Fechas.hora(hueco.fin)}',
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: esquema.onSurfaceVariant, fontWeight: FontWeight.w500),
+      ),
+    );
+  }
+}
+
+/// Resumen del día: tarjeta con degradado y números que «cuentan» hasta su valor.
+class _Resumen extends StatelessWidget {
+  const _Resumen({required this.activas, required this.atendidas, required this.libres});
+
+  final int activas;
+  final int atendidas;
+  final int libres;
+
+  @override
+  Widget build(BuildContext context) {
+    final progreso = activas == 0 ? 0.0 : atendidas / activas;
+    Widget dato(int valor, String etiqueta) => Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          NumeroAnimado(
+            valor: valor,
+            estilo: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800, height: 1.1),
+          ),
+          Text(etiqueta, style: TextStyle(color: Colors.white.withValues(alpha: 0.88), fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        gradient: Paleta.degradado,
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [BoxShadow(color: Paleta.frambuesa.withValues(alpha: 0.28), blurRadius: 22, offset: const Offset(0, 10))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              dato(activas, activas == 1 ? 'cita' : 'citas'),
+              dato(atendidas, atendidas == 1 ? 'atendida' : 'atendidas'),
+              dato(libres, libres == 1 ? 'libre' : 'libres'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: progreso),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.easeOutCubic,
+              builder: (_, v, _) => LinearProgressIndicator(
+                value: v,
+                minHeight: 8,
+                color: Colors.white,
+                backgroundColor: Colors.white.withValues(alpha: 0.25),
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            activas == 0
+                ? 'Día tranquilo por ahora'
+                : atendidas == activas
+                ? '¡Día completo! Atendiste a todos 🎉'
+                : 'Llevas ${(progreso * 100).round()} % del día',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12.5),
+          ),
+        ],
       ),
     );
   }
@@ -529,7 +594,11 @@ class _TarjetaCita extends ConsumerWidget {
         child: Card(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            side: cita.enCurso ? const BorderSide(color: colorExito, width: 2) : BorderSide.none,
+            side: cita.enCurso
+                ? const BorderSide(color: colorExito, width: 2)
+                : cita.porAprobar
+                ? const BorderSide(color: Paleta.ambar, width: 1.4)
+                : const BorderSide(color: Paleta.borde),
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
@@ -580,6 +649,7 @@ class _TarjetaCita extends ConsumerWidget {
                             '${cita.paciente.inasistencias} inasistencia${cita.paciente.inasistencias == 1 ? '' : 's'}',
                             style: textos.bodySmall?.copyWith(color: colorAvisoTexto, fontWeight: FontWeight.w600),
                           ),
+                        if (cita.notas.isNotEmpty) NotaCita(cita.notas, compacta: true),
                         const SizedBox(height: 8),
                         ChipEstado(estado: cita.estado, texto: cita.estadoTexto),
                       ],
@@ -640,7 +710,7 @@ class _PanelConsulta extends ConsumerWidget {
         color: esquema.surfaceContainerLowest,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, -4)),
+          BoxShadow(color: Paleta.frambuesa.withValues(alpha: 0.10), blurRadius: 28, offset: const Offset(0, -6)),
         ],
       ),
       child: SafeArea(
@@ -693,6 +763,7 @@ class _PanelConsulta extends ConsumerWidget {
                   ),
                 ],
               ),
+              if (cita.notas.isNotEmpty) NotaCita(cita.notas, compacta: true),
               const SizedBox(height: 12),
               if (cita.enCurso)
                 FilledButton(

@@ -4,7 +4,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api.dart';
 import '../../core/modo.dart';
-import '../../core/tema.dart';
+import '../../shared/diseno/paleta.dart';
+import '../../shared/diseno/vidrio.dart';
+import 'mascota.dart';
 import 'sesion_cliente.dart';
 
 /// Primera pantalla: la misma app sirve para reservar y para atender un negocio.
@@ -21,8 +23,10 @@ class BienvenidaPantalla extends ConsumerWidget {
           shrinkWrap: true,
           padding: const EdgeInsets.all(24),
           children: [
-            const _Logo(),
-            const SizedBox(height: 20),
+            const Center(child: Rubi(tam: 120, etiqueta: 'Rubí, la mascota de RyCitas')),
+            const SizedBox(height: 12),
+            const Center(child: GloboRubi(texto: '¡Hola! Soy Rubí. Te ayudo a reservar sin llamadas.')),
+            const SizedBox(height: 18),
             Text('RyCitas', textAlign: TextAlign.center, style: textos.headlineLarge),
             const SizedBox(height: 6),
             Text(
@@ -74,8 +78,8 @@ class _Opcion extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: esquema.primaryContainer, borderRadius: BorderRadius.circular(16)),
-                child: Icon(icono, color: esquema.onPrimaryContainer, size: 28),
+                decoration: BoxDecoration(gradient: Paleta.degradado, borderRadius: BorderRadius.circular(16)),
+                child: Icon(icono, color: Colors.white, size: 28),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -103,44 +107,13 @@ class _Fondo extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    final esquema = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [colorMarca.withValues(alpha: 0.16), esquema.surface, esquema.surface],
-          stops: const [0, 0.45, 1],
-        ),
+  Widget build(BuildContext context) => FondoManchas(
+    child: SafeArea(
+      child: Center(
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440), child: child),
       ),
-      child: SafeArea(
-        child: Center(
-          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440), child: child),
-        ),
-      ),
-    );
-  }
-}
-
-class _Logo extends StatelessWidget {
-  const _Logo();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [BoxShadow(color: colorMarca.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 8))],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Image.asset('assets/logo.png', width: 76, height: 76),
-        ),
-      ),
-    );
-  }
+    ),
+  );
 }
 
 /// Registro y entrada del cliente: correo, nombre y WhatsApp. Sin contraseña.
@@ -217,7 +190,7 @@ class _RegistroClienteState extends ConsumerState<RegistroClientePantalla> {
             shrinkWrap: true,
             padding: const EdgeInsets.all(24),
             children: [
-              const _Logo(),
+              const Center(child: Rubi(tam: 88, etiqueta: 'Rubí, la mascota de RyCitas')),
               const SizedBox(height: 16),
               Text('Reserva con RyCitas', textAlign: TextAlign.center, style: textos.headlineSmall),
               const SizedBox(height: 6),

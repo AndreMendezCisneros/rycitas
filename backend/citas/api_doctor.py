@@ -24,6 +24,11 @@ class CitaEntrada(Schema):
     nombre: str
     celular: str
     profesional_id: int | None = None
+    notas: str = ""
+
+
+class NotasEntrada(Schema):
+    notas: str = ""
 
 
 class AprobarEntrada(Schema):
@@ -268,9 +273,16 @@ def crear(request, datos: CitaEntrada):
         datos.celular,
         # Una cuenta de profesional solo agenda en su propia agenda.
         request.auth.profesional_id or datos.profesional_id,
+        notas=datos.notas,
     )
     # Sin este aviso, quien reservó por teléfono no recibiría nunca su enlace ni su calendario.
     return 201, _con_aviso(request, cita)
+
+
+@router.put("/citas/{cita_id}/notas")
+def notas(request, cita_id: int, datos: NotasEntrada):
+    cita = servicios.editar_notas(request.auth.consultorio, request.auth, cita_id, datos.notas)
+    return {"cita_id": cita.pk, "notas": cita.notas}
 
 
 @router.post("/citas/{cita_id}/iniciar")

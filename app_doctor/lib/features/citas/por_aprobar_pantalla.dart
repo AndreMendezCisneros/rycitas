@@ -5,6 +5,7 @@ import '../../core/api.dart';
 import '../../core/fechas.dart';
 import '../../core/negocio.dart';
 import '../../shared/comunes.dart';
+import '../../shared/diseno/notas.dart';
 import '../../shared/modelos.dart';
 import 'acciones_cita.dart';
 
@@ -104,6 +105,7 @@ class PorAprobarPantalla extends ConsumerWidget {
                             dato(Icons.person_outline_rounded, 'Con ${c.profesional!.nombre}'),
                           if (c.cupon != null)
                             dato(Icons.local_offer_outlined, 'Cupón ${c.cupon!.codigo}: ${c.cupon!.titulo} (${c.cupon!.descuento})'),
+                          if (c.notas.isNotEmpty) NotaCita(c.notas),
                           if (c.tieneOferta)
                             Container(
                               margin: const EdgeInsets.only(top: 10),

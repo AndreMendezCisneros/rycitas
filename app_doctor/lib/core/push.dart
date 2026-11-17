@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -25,12 +26,21 @@ final canalesDeAviso = [
   _nuevoCanal('nuevas_v2', 'Citas nuevas', '«¡Listo! Se agendó una nueva cita»'),
   _nuevoCanal('proximas_v2', 'Cita por empezar', '«Tu próxima cita empieza en unos minutos»'),
   _nuevoCanal('general_v2', 'Resumen y otros avisos', 'Agenda de mañana y otros avisos'),
+  // App del cliente: confirmaciones, cambios y recordatorios de sus citas (con el sonido del teléfono).
+  const AndroidNotificationChannel(
+    'mis_citas_v1',
+    'Mis citas',
+    description: 'Confirmaciones, cambios y recordatorios de tus citas',
+    importance: Importance.high,
+  ),
 ];
 
+/// Debe coincidir con CANAL_POR_TIPO (mensajeria/push.py) y CANAL_CITAS (clientes/avisos.py).
 String canalDeAviso(String? tipo) => switch (tipo) {
   'por_aprobar' => 'reservas_v2',
   'nueva_cita' => 'nuevas_v2',
   'cita_proxima' => 'proximas_v2',
+  'cita' || 'recordatorio' => 'mis_citas_v1',
   _ => 'general_v2',
 };
 
@@ -64,6 +74,15 @@ class Push {
 
     await _locales.initialize(
       settings: const InitializationSettings(android: AndroidInitializationSettings('@mipmap/ic_launcher')),
+      onDidReceiveNotificationResponse: (respuesta) {
+        final datos = respuesta.payload;
+        if (datos == null || datos.isEmpty) return;
+        try {
+          _alAbrir((jsonDecode(datos) as Map).cast<String, dynamic>());
+        } on FormatException {
+          // Aviso de una versión anterior, sin datos: no hay a dónde ir.
+        }
+      },
     );
     final android = _locales.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     for (final canal in canalesDeAviso) {
@@ -128,6 +147,8 @@ class Push {
           sound: canal.sound,
         ),
       ),
+      // Con la app abierta: al tocar el aviso se va al mismo lugar que desde la bandeja.
+      payload: jsonEncode(mensaje.data),
     );
   }
 
@@ -146,12 +167,13 @@ final avisoPushProvider = StateProvider<int>((ref) => 0);
 /// Ruta a la que hay que ir porque el doctor tocó una notificación.
 final destinoPushProvider = StateProvider<String?>((ref) => null);
 
+/// Toda ruta que devuelva debe existir en rutas.dart (test/app_test.dart lo comprueba).
 String? rutaDeAviso(String? tipo) => switch (tipo) {
   'recordatorios' || 'resumen' => '/recordatorios',
   'por_aprobar' => '/por-aprobar',
-  // «En 30 min: Rosa Paz» y las citas nuevas: a la agenda del día.
-  'cita_proxima' || 'nueva_cita' => '/',
-  _ => null,
+  // «En 30 min: tu próxima cita» y las citas nuevas: a la agenda del día.
+  'cita_proxima' || 'nueva_cita' => '/hoy',
+  _ => '/hoy',
 };
 
 final pushProvider = Provider<Push>((ref) {
@@ -167,6 +189,7 @@ final pushProvider = Provider<Push>((ref) {
 /// Avisos de la app del cliente: sellos, tarjeta llena y promociones de sus lugares.
 String rutaDeAvisoCliente(Map<String, dynamic> datos) => switch (datos['tipo']) {
   'campana' || 'sello' || 'tarjeta_llena' when datos['negocio'] != null => '/cliente/negocio/${datos['negocio']}',
+  'cita' || 'recordatorio' => datos['cita_id'] != null ? '/cliente/citas?cita=${datos['cita_id']}' : '/cliente/citas',
   _ => '/cliente/beneficios',
 };
 

@@ -39,10 +39,14 @@ final misCitasProvider = FutureProvider.autoDispose<Json>((ref) => ref.read(apiC
 
 final beneficiosProvider = FutureProvider.autoDispose<Json>((ref) => ref.read(apiClienteProvider).get('/beneficios'));
 
+/// Logros, racha, puntos y nivel global.
+final logrosProvider = FutureProvider.autoDispose<Json>((ref) => ref.read(apiClienteProvider).get('/logros'));
+
 /// Tras reservar, canjear o cambiar algo: todo lo que depende de las citas y los sellos se vuelve a pedir.
 void refrescarCliente(WidgetRef ref) {
   ref
     ..invalidate(misNegociosProvider)
     ..invalidate(misCitasProvider)
-    ..invalidate(beneficiosProvider);
+    ..invalidate(beneficiosProvider)
+    ..invalidate(logrosProvider);
 }

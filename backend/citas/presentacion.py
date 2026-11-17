@@ -211,6 +211,7 @@ def cita_doctor(cita: Cita, estimacion: Estimacion | None = None) -> dict:
             "inasistencias": cita.paciente.inasistencias,
         },
         "cupon": _cupon_de(cita),
+        "notas": cita.notas,
     }
 
 

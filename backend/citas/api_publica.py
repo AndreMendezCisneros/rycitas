@@ -33,6 +33,7 @@ class ReservaEntrada(Schema):
     turnstile: str = ""
     profesional: int | None = None  # None: «Cualquiera»
     precio_ofrecido: float | None = None
+    notas: str = ""  # «¿Algo que debamos saber?»: opcional
 
 
 class EventoEntrada(Schema):
@@ -134,6 +135,7 @@ def reservar(request, slug: str, datos: ReservaEntrada):
         profesional_id=datos.profesional,
         precio_ofrecido=datos.precio_ofrecido,
         acepta_publicidad=datos.acepta_publicidad,
+        notas=datos.notas,
     )
     return 201, presentacion.reserva_creada(cita)
 

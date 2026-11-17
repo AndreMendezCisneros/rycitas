@@ -117,6 +117,17 @@ Map<String, Respuesta? Function(dynamic)> _rutasCliente({List<Map<String, dynami
     );
   },
   'GET /mis-citas': (_) => ok({'proximas': [], 'pasadas': []}),
+  'GET /logros': (_) => ok({
+    'logros': [
+      {'clave': 'primera', 'titulo': 'Primera cita', 'como': 'Completa tu primera visita.', 'progreso': 1, 'meta': 1, 'logrado': true, 'icono': 'estrella'},
+      {'clave': 'fiel', 'titulo': 'Cliente fiel', 'como': 'Completa 5 visitas.', 'progreso': 1, 'meta': 5, 'logrado': false, 'icono': 'corazon'},
+    ],
+    'visitas': 1,
+    'puntos': 25,
+    'racha': 1,
+    'racha_activa': true,
+    'nivel': {'nombre': 'Nueva', 'siguiente': 'Habitual', 'faltan': 2, 'progreso': 0.33},
+  }),
   'GET /beneficios': (_) => ok({
     'tarjetas': [
       {
@@ -223,17 +234,25 @@ void main() {
     await t.tap(find.text('11:00'));
     await t.pumpAndSettle();
     expect(find.text('Con Carlos Ruiz'), findsOneWidget);
+    await t.enterText(find.byKey(const Key('campo-notas')), 'Piel sensible');
+    await t.pumpAndSettle();
+    await t.ensureVisible(find.byKey(const Key('usar-cupon-GLOW20')));
+    await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('usar-cupon-GLOW20')));
+    await t.pumpAndSettle();
+    await t.ensureVisible(find.byKey(const Key('confirmar-reserva')));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('confirmar-reserva')));
     await t.pumpAndSettle();
 
     expect(find.text('¡Reserva enviada!'), findsOneWidget);
+    expect(find.text('Por confirmar'), findsOneWidget);
     expect(enviados.single, {
       'motivo': 'hydrafacial',
       'inicio': '2026-11-10T11:00:00-05:00',
       'profesional': 2,
       'cupon': 7,
+      'notas': 'Piel sensible',
     });
   });
 
@@ -244,7 +263,9 @@ void main() {
     await t.pumpAndSettle();
     expect(find.byKey(const Key('cupon-GLOW20')), findsOneWidget);
     expect(find.byKey(const Key('tarjeta-sellos')), findsOneWidget);
-    await t.ensureVisible(find.byKey(const Key('codigo-referido')));
+    expect(find.byKey(const Key('seccion-logros')), findsOneWidget);
+    expect(find.byKey(const Key('logro-primera')), findsOneWidget);
+    await t.scrollUntilVisible(find.byKey(const Key('codigo-referido')), 300, scrollable: find.byType(Scrollable).first);
     expect(find.text('K7PQ2M'), findsOneWidget);
   });
 

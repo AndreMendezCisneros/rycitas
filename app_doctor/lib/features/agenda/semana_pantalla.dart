@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/api.dart';
 import '../../core/fechas.dart';
 import '../../core/tema.dart';
 import '../../core/negocio.dart';
 import '../../shared/comunes.dart';
+import '../../shared/diseno/calendario.dart';
+import '../../shared/diseno/movimiento.dart';
+import '../../shared/diseno/paleta.dart';
+import '../../shared/diseno/vidrio.dart';
 import '../../shared/modelos.dart';
+import '../citas/reserva_rapida.dart';
 import '../citas/acciones_cita.dart';
 import 'hoy_pantalla.dart' show FiltroProfesional;
 
@@ -23,8 +27,8 @@ final mesProvider = FutureProvider.autoDispose.family<List<DiaMes>, (int, int)>(
   return (datos['dias'] as List).map((d) => DiaMes.fromJson(d as Map<String, dynamic>)).toList();
 });
 
-enum Vista { semana, mes }
-
+/// «Calendario» del negocio: el mes con la ocupación de cada día. Tocar un día abre una hoja flotante con sus citas;
+/// debajo, la semana desde el día elegido.
 class SemanaPantalla extends ConsumerStatefulWidget {
   const SemanaPantalla({super.key});
 
@@ -33,188 +37,164 @@ class SemanaPantalla extends ConsumerStatefulWidget {
 }
 
 class _SemanaPantallaState extends ConsumerState<SemanaPantalla> {
-  late DateTime _desde = DateTime(Fechas.ahora().year, Fechas.ahora().month, Fechas.ahora().day);
-  late DateTime _mes = DateTime(_desde.year, _desde.month);
-  Vista _vista = Vista.semana;
+  late DateTime _elegido = DateTime(Fechas.ahora().year, Fechas.ahora().month, Fechas.ahora().day);
+  late DateTime _mes = DateTime(_elegido.year, _elegido.month);
 
-  void _mover(int paso) => setState(() {
-    if (_vista == Vista.semana) {
-      _desde = _desde.add(Duration(days: 7 * paso));
-    } else {
-      _mes = DateTime(_mes.year, _mes.month + paso);
-    }
-  });
-
-  /// Tocar un día del mes abre la semana que empieza ese día.
-  void _abrirDia(DateTime dia) => setState(() {
-    _desde = dia;
-    _vista = Vista.semana;
-  });
+  void _tocarDia(DateTime dia) {
+    setState(() => _elegido = dia);
+    mostrarHojaDia(context, dia);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final esSemana = _vista == Vista.semana;
+    final clave = (_mes.year, _mes.month);
+    final mes = ref.watch(mesProvider(clave));
+    final marcas = {
+      for (final d in mes.value ?? const <DiaMes>[])
+        d.fecha: MarcaDia(
+          citas: d.citas,
+          porConfirmar: d.porConfirmar,
+          bloqueo: d.bloqueo,
+          colores: List.filled(d.citas.clamp(0, 3), Paleta.frambuesa),
+        ),
+    };
+    final desde = Fechas.fechaApi(_elegido);
+    final semana = ref.watch(semanaProvider(desde));
     return Scaffold(
-      appBar: AppBar(
-        title: Text(esSemana ? 'Semana' : _tituloMes(_mes)),
-        actions: [
-          const FiltroProfesional(),
-          IconButton(
-            tooltip: esSemana ? 'Semana anterior' : 'Mes anterior',
-            onPressed: () => _mover(-1),
-            icon: const Icon(Icons.chevron_left),
-          ),
-          IconButton(
-            tooltip: esSemana ? 'Semana siguiente' : 'Mes siguiente',
-            onPressed: () => _mover(1),
-            icon: const Icon(Icons.chevron_right),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: SegmentedButton<Vista>(
-              segments: const [
-                ButtonSegment(value: Vista.semana, label: Text('Semana'), icon: Icon(Icons.view_week_outlined)),
-                ButtonSegment(value: Vista.mes, label: Text('Mes'), icon: Icon(Icons.calendar_month_outlined)),
+      body: FondoManchas(
+        intensidad: 0.6,
+        child: SafeArea(
+          bottom: false,
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(mesProvider(clave));
+              final _ = await ref.refresh(semanaProvider(desde).future);
+            },
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: Text('Calendario', style: Theme.of(context).textTheme.headlineMedium)),
+                    const FiltroProfesional(),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Vidrio(
+                  radio: 28,
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+                  child: mes.hasError
+                      ? ErrorConReintento(error: mes.error!, alReintentar: () => ref.invalidate(mesProvider(clave)))
+                      : CalendarioMes(
+                          mes: _mes,
+                          hoy: Fechas.ahora(),
+                          seleccionado: _elegido,
+                          marcas: marcas,
+                          cargando: mes.isLoading,
+                          alCambiarMes: (paso) => setState(() => _mes = DateTime(_mes.year, _mes.month + paso)),
+                          alTocarDia: _tocarDia,
+                        ),
+                ),
+                const SizedBox(height: 12),
+                const LeyendaCalendario(
+                  items: [
+                    (Paleta.frambuesa, 'Citas'),
+                    (Paleta.ambar, 'Por confirmar'),
+                    (Paleta.gris, 'Bloqueado (tachado)'),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text('Desde el día elegido', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 10),
+                ...semana.when(
+                  loading: () => [const Padding(padding: EdgeInsets.all(24), child: Cargando())],
+                  error: (e, _) => [
+                    ErrorConReintento(error: e, alReintentar: () => ref.invalidate(semanaProvider(desde))),
+                  ],
+                  data: (dias) => [
+                    for (final (i, d) in dias.indexed)
+                      AparecerEnCascada(
+                        key: ValueKey('${d.fecha}-$i'),
+                        indice: i,
+                        child: _Dia(dia: d, alCambiar: () => ref.invalidate(semanaProvider(desde))),
+                      ),
+                  ],
+                ),
               ],
-              selected: {_vista},
-              onSelectionChanged: (v) => setState(() => _vista = v.first),
             ),
           ),
         ),
       ),
-      body: esSemana ? _semana() : _Mes(mes: _mes, alElegir: _abrirDia),
-    );
-  }
-
-  String _tituloMes(DateTime mes) {
-    final texto = DateFormat('MMMM yyyy', 'es').format(mes);
-    return texto[0].toUpperCase() + texto.substring(1);
-  }
-
-  Widget _semana() {
-    final clave = Fechas.fechaApi(_desde);
-    final semana = ref.watch(semanaProvider(clave));
-    return semana.when(
-      loading: () => const Cargando(),
-      error: (e, _) => ErrorConReintento(error: e, alReintentar: () => ref.invalidate(semanaProvider(clave))),
-      data: (dias) => RefreshIndicator(
-        onRefresh: () => ref.refresh(semanaProvider(clave).future),
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: dias.length,
-          itemBuilder: (_, i) => _Dia(dia: dias[i], alCambiar: () => ref.invalidate(semanaProvider(clave))),
-        ),
-      ),
     );
   }
 }
 
-/// Cuadrícula del mes: cuántas citas tiene cada día, las por confirmar y los días bloqueados.
-class _Mes extends ConsumerWidget {
-  const _Mes({required this.mes, required this.alElegir});
+/// Hoja flotante de vidrio con lo que hay en un día: sus citas (con notas) y bloqueos, y «Reservar en este día».
+Future<void> mostrarHojaDia(BuildContext context, DateTime dia) => mostrarHojaVidrio<void>(
+  context,
+  builder: (_) => _HojaDia(dia: dia),
+);
 
-  final DateTime mes;
-  final void Function(DateTime) alElegir;
+class _HojaDia extends ConsumerWidget {
+  const _HojaDia({required this.dia});
+
+  final DateTime dia;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final clave = (mes.year, mes.month);
-    final datos = ref.watch(mesProvider(clave));
-    return datos.when(
-      loading: () => const Cargando(),
-      error: (e, _) => ErrorConReintento(error: e, alReintentar: () => ref.invalidate(mesProvider(clave))),
-      data: (dias) {
-        final hoy = Fechas.fechaApi(Fechas.ahora());
-        final vacios = DateTime.parse(dias.first.fecha).weekday - 1; // la semana empieza en lunes
-        return RefreshIndicator(
-          onRefresh: () => ref.refresh(mesProvider(clave).future),
-          child: ListView(
-            padding: const EdgeInsets.all(12),
-            children: [
-              Row(
-                children: [
-                  for (final d in const ['L', 'M', 'M', 'J', 'V', 'S', 'D'])
-                    Expanded(
-                      child: Center(
-                        child: Text(d, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              GridView.count(
-                crossAxisCount: 7,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 4,
-                crossAxisSpacing: 4,
-                childAspectRatio: 0.8,
-                children: [
-                  for (var i = 0; i < vacios; i++) const SizedBox.shrink(),
-                  for (final d in dias)
-                    _CeldaDia(dia: d, esHoy: d.fecha == hoy, alTocar: () => alElegir(DateTime.parse(d.fecha))),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'El número es la cantidad de citas. Naranja: hay reservas por confirmar. Gris: día bloqueado.',
-              ),
-            ],
+    final clave = Fechas.fechaApi(dia);
+    final datos = ref.watch(semanaProvider(clave));
+    final titulo = Fechas.diaLargo(clave);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            titulo[0].toUpperCase() + titulo.substring(1),
+            style: Theme.of(context).textTheme.titleLarge,
           ),
-        );
-      },
-    );
-  }
-}
-
-class _CeldaDia extends StatelessWidget {
-  const _CeldaDia({required this.dia, required this.esHoy, required this.alTocar});
-
-  final DiaMes dia;
-  final bool esHoy;
-  final VoidCallback alTocar;
-
-  @override
-  Widget build(BuildContext context) {
-    final esquema = Theme.of(context).colorScheme;
-    final fondo = dia.bloqueo
-        ? esquema.surfaceContainerHighest
-        : dia.porConfirmar > 0
-        ? const Color(0xFFFFE8CC)
-        : dia.citas > 0
-        ? esquema.primaryContainer
-        : null;
-    return Material(
-      color: fondo,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: esHoy ? BorderSide(color: esquema.primary, width: 2) : BorderSide.none,
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: alTocar,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('${DateTime.parse(dia.fecha).day}', style: const TextStyle(fontWeight: FontWeight.w600)),
-            if (dia.citas > 0)
-              Text('${dia.citas}', key: Key('citas-${dia.fecha}'), style: Theme.of(context).textTheme.bodySmall),
-            if (dia.bloqueo && dia.citas == 0) const Icon(Icons.block, size: 14),
-          ],
-        ),
+          const SizedBox(height: 12),
+          Flexible(
+            child: datos.when(
+              loading: () => const Padding(padding: EdgeInsets.all(32), child: Cargando()),
+              error: (e, _) => ErrorConReintento(error: e, alReintentar: () => ref.invalidate(semanaProvider(clave))),
+              data: (dias) {
+                final d = dias.isEmpty ? null : dias.first;
+                if (d == null || (d.citas.isEmpty && d.bloqueos.isEmpty)) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Vacio('Día libre: aún no hay citas.'),
+                  );
+                }
+                return SingleChildScrollView(
+                  child: _Dia(dia: d, alCambiar: () => ref.invalidate(semanaProvider(clave)), sinTitulo: true),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              abrirReservaRapida(context, ref, dia: dia);
+            },
+            icon: const Icon(Icons.bolt_rounded),
+            label: const Text('Reservar en este día'),
+          ),
+        ],
       ),
     );
   }
 }
 
 class _Dia extends ConsumerWidget {
-  const _Dia({required this.dia, required this.alCambiar});
+  const _Dia({required this.dia, required this.alCambiar, this.sinTitulo = false});
 
   final DiaSemana dia;
   final VoidCallback alCambiar;
+  final bool sinTitulo;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -227,10 +207,11 @@ class _Dia extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            titulo[0].toUpperCase() + titulo.substring(1),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
+          if (!sinTitulo)
+            Text(
+              titulo[0].toUpperCase() + titulo.substring(1),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
           // «Mañana 2 · Tarde 1 (1 por confirmar)»: cuánto trae cada turno, sin abrir el día.
           if (dia.turnos.length > 1 && conCitas.isNotEmpty)
             Padding(

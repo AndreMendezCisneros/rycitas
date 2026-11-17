@@ -5,9 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api.dart';
+import '../../core/fechas.dart';
 import '../../core/modo.dart';
 import '../../shared/comunes.dart';
+import '../../shared/diseno/barra_navegacion.dart';
+import '../../shared/diseno/movimiento.dart';
+import '../../shared/diseno/paleta.dart';
+import '../../shared/diseno/vidrio.dart';
+import 'citas_beneficios.dart';
 import 'datos_cliente.dart';
+import 'gamificacion.dart';
+import 'lugares_hoja.dart';
+import 'mascota.dart';
 import 'sesion_cliente.dart';
 import 'widgets_cliente.dart';
 
@@ -39,49 +48,101 @@ class _InicioClienteState extends ConsumerState<InicioClientePantalla> {
 
   bool get _buscando => _q.isNotEmpty || _rubro.isNotEmpty;
 
+  void _abrirRubi(String nombre) {
+    mostrarLugaresParaReservar(
+      context,
+      encabezado: Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const Rubi(tam: 64, expresion: ExpresionRubi.celebra),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GloboRubi(texto: 'Estos son los lugares donde puedes reservar, $nombre. ¿Cuál te provoca?'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final yo = ref.watch(yoProvider).value;
     final nombre = (yo?['nombre'] as String? ?? '').split(' ').first;
+    final proxima = lista(ref.watch(misCitasProvider).valueOrNull?['proximas']).firstOrNull;
+    final textos = Theme.of(context).textTheme;
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async => refrescarCliente(ref),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            children: [
-              Text(nombre.isEmpty ? '¡Hola!' : '¡Hola, $nombre!', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 4),
-              Text(
-                '¿Dónde quieres reservar hoy?',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                key: const Key('buscar-negocio'),
-                controller: _buscar,
-                onChanged: _alEscribir,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: 'Busca por nombre o distrito',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  suffixIcon: _q.isEmpty
-                      ? null
-                      : IconButton(
-                          tooltip: 'Borrar',
-                          icon: const Icon(Icons.close_rounded),
-                          onPressed: () {
-                            _buscar.clear();
-                            setState(() => _q = '');
-                          },
+      body: FondoManchas(
+        child: SafeArea(
+          bottom: false,
+          child: RefreshIndicator(
+            onRefresh: () async => refrescarCliente(ref),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(nombre.isEmpty ? '¡Hola!' : '¡Hola, $nombre!', style: textos.headlineMedium),
+                          const SizedBox(height: 8),
+                          GloboRubi(texto: saludoRubi(nombre.isEmpty ? 'tú' : nombre, Fechas.ahora())),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      children: [
+                        Rubi(tam: 92, alTocar: () => _abrirRubi(nombre.isEmpty ? 'amiga' : nombre)),
+                        Text(
+                          'Tócame',
+                          style: textos.labelSmall?.copyWith(color: Paleta.frambuesa, fontWeight: FontWeight.w800),
                         ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              _Rubros(elegido: _rubro, alElegir: (r) => setState(() => _rubro = r == _rubro ? '' : r)),
-              const SizedBox(height: 16),
-              if (_buscando) _Resultados(q: _q, rubro: _rubro) else const _MisLugares(),
-            ],
+                const SizedBox(height: 18),
+                if (proxima != null) ...[ProximaCitaTarjeta(cita: proxima), const SizedBox(height: 16)],
+                const TarjetaProgreso(),
+                const SizedBox(height: 16),
+                TextField(
+                  key: const Key('buscar-negocio'),
+                  controller: _buscar,
+                  onChanged: _alEscribir,
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'Busca por nombre o distrito',
+                    fillColor: Colors.white,
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: _q.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Borrar',
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () {
+                              _buscar.clear();
+                              setState(() => _q = '');
+                            },
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _Rubros(elegido: _rubro, alElegir: (r) => setState(() => _rubro = r == _rubro ? '' : r)),
+                const SizedBox(height: 16),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: _buscando
+                      ? _Resultados(key: ValueKey('$_q|$_rubro'), q: _q, rubro: _rubro)
+                      : const _MisLugares(key: ValueKey('mios')),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -106,6 +167,8 @@ class _Rubros extends ConsumerWidget {
         itemCount: rubros.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, i) => FilterChip(
+          avatar: Icon(iconoRubro(rubros[i]['clave'] as String), size: 18, color: Paleta.frambuesa),
+          showCheckmark: false,
           label: Text(rubros[i]['nombre'] as String),
           selected: rubros[i]['clave'] == elegido,
           onSelected: (_) => alElegir(rubros[i]['clave'] as String),
@@ -116,7 +179,7 @@ class _Rubros extends ConsumerWidget {
 }
 
 class _MisLugares extends ConsumerWidget {
-  const _MisLugares();
+  const _MisLugares({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -131,7 +194,8 @@ class _MisLugares extends ConsumerWidget {
             children: [
               const AvisoSuave(
                 icono: Icons.verified_user_outlined,
-                texto: 'Para ver tus citas, sellos y cupones, confirma que este WhatsApp es tuyo: pega el enlace de '
+                texto:
+                    'Para ver tus citas, sellos y cupones, confirma que este WhatsApp es tuyo: pega el enlace de '
                     'una de tus citas, el que te mandó el negocio por WhatsApp.',
               ),
               FilledButton.tonalIcon(
@@ -146,14 +210,21 @@ class _MisLugares extends ConsumerWidget {
         if (negocios.isEmpty) {
           return const AvisoSuave(
             icono: Icons.travel_explore_rounded,
-            texto: 'Aquí aparecerán los lugares donde reservas con este WhatsApp. Busca uno arriba para empezar.',
+            texto: 'Aquí aparecerán los lugares donde reservas con este WhatsApp. Toca a Rubí o busca uno arriba.',
           );
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const TituloGrupo('Tus lugares'),
-            for (final n in negocios) TarjetaNegocio(negocio: n, conProgreso: true),
+            for (final (i, n) in negocios.indexed)
+              AparecerEnCascada(
+                indice: i,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: TarjetaNegocio(negocio: n, conProgreso: true),
+                ),
+              ),
           ],
         );
       },
@@ -162,7 +233,7 @@ class _MisLugares extends ConsumerWidget {
 }
 
 class _Resultados extends ConsumerWidget {
-  const _Resultados({required this.q, required this.rubro});
+  const _Resultados({super.key, required this.q, required this.rubro});
 
   final String q;
   final String rubro;
@@ -181,7 +252,16 @@ class _Resultados extends ConsumerWidget {
         }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [for (final n in negocios) TarjetaNegocio(negocio: n)],
+          children: [
+            for (final (i, n) in negocios.indexed)
+              AparecerEnCascada(
+                indice: i,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: TarjetaNegocio(negocio: n),
+                ),
+              ),
+          ],
         );
       },
     );
@@ -229,6 +309,7 @@ class PerfilClientePantalla extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final yo = ref.watch(yoProvider);
     return Scaffold(
+      backgroundColor: Paleta.fondo,
       appBar: AppBar(title: const Text('Mi perfil')),
       body: yo.when(
         loading: () => const Cargando(),
@@ -236,15 +317,39 @@ class PerfilClientePantalla extends ConsumerWidget {
         data: (d) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Card(
-              child: ListTile(
-                leading: Avatar(d['nombre'] as String),
-                title: Text(d['nombre'] as String),
-                subtitle: Text('${d['correo']}\nWhatsApp ${d['celular']}'),
-                isThreeLine: true,
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(gradient: Paleta.degradado, borderRadius: BorderRadius.circular(26)),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Colors.white,
+                    child: Text(
+                      (d['nombre'] as String).characters.first.toUpperCase(),
+                      style: const TextStyle(color: Paleta.frambuesa, fontWeight: FontWeight.w800, fontSize: 22),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          d['nombre'] as String,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                        ),
+                        Text('${d['correo']}', style: const TextStyle(color: Colors.white70)),
+                        Text('WhatsApp ${d['celular']}', style: const TextStyle(color: Colors.white70)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
+            const TarjetaProgreso(),
+            const SizedBox(height: 12),
             TarjetaInvitar(codigo: d['codigo_referido'] as String, invitados: d['invitados'] as int? ?? 0),
             const SizedBox(height: 8),
             Card(
@@ -303,30 +408,14 @@ class NavegacionCliente extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: navegacion,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navegacion.currentIndex,
-        onDestinationSelected: (i) => navegacion.goBranch(i, initialLocation: i == navegacion.currentIndex),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Inicio',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.event_note_outlined),
-            selectedIcon: Icon(Icons.event_note_rounded),
-            label: 'Mis citas',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.loyalty_outlined),
-            selectedIcon: Icon(Icons.loyalty_rounded),
-            label: 'Beneficios',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Perfil',
-          ),
+      bottomNavigationBar: BarraFlotante(
+        indice: navegacion.currentIndex,
+        alElegir: (i) => navegacion.goBranch(i, initialLocation: i == navegacion.currentIndex),
+        destinos: const [
+          DestinoBarra(icono: Icons.home_outlined, iconoActivo: Icons.home_rounded, texto: 'Inicio'),
+          DestinoBarra(icono: Icons.event_note_outlined, iconoActivo: Icons.event_note_rounded, texto: 'Mis citas'),
+          DestinoBarra(icono: Icons.loyalty_outlined, iconoActivo: Icons.loyalty_rounded, texto: 'Beneficios'),
+          DestinoBarra(icono: Icons.person_outline, iconoActivo: Icons.person_rounded, texto: 'Perfil'),
         ],
       ),
     );

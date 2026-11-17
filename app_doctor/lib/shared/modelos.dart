@@ -69,6 +69,9 @@ abstract class Cita with _$Cita {
 
     /// Cupón que el cliente eligió al reservar desde la app.
     CuponCita? cupon,
+
+    /// Lo que pidió en detalle («corte en capas, traigo foto»).
+    @Default('') String notas,
   }) = _Cita;
 
   factory Cita.fromJson(Map<String, dynamic> json) => _$CitaFromJson(json);

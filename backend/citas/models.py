@@ -90,6 +90,12 @@ class Cita(models.Model):
     precio_referencia = models.PositiveIntegerField("precio de referencia (céntimos)", null=True, blank=True)
     precio_ofrecido = models.PositiveIntegerField("precio ofrecido por el cliente (céntimos)", null=True, blank=True)
     precio_acordado = models.PositiveIntegerField("precio acordado (céntimos)", null=True, blank=True)
+    # Lo que el cliente pidió en detalle («corte en capas, traigo foto»). Dato personal: nunca va en un push ni en
+    # los logs; solo lo ven el negocio y el propio cliente.
+    notas = models.TextField(max_length=500, blank=True)
+    # Recordatorios push a la app del cliente: cada uno sale una sola vez por hora de cita.
+    aviso_cliente_24h_en = models.DateTimeField(null=True, blank=True)
+    aviso_cliente_2h_en = models.DateTimeField(null=True, blank=True)
     creado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:

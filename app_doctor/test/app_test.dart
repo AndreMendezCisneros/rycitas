@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:denticita_doctor/core/api.dart';
 import 'package:denticita_doctor/core/fechas.dart';
 import 'package:denticita_doctor/core/modo.dart';
+import 'package:denticita_doctor/core/push.dart';
+import 'package:denticita_doctor/core/rutas.dart';
 import 'package:denticita_doctor/features/agenda/agenda_controlador.dart';
 import 'package:denticita_doctor/features/auth/sesion.dart';
 import 'package:denticita_doctor/main.dart';
@@ -53,6 +55,29 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
     zonas.initializeTimeZones();
     await initializeDateFormatting('es');
+  });
+
+  group('avisos', () {
+    test('cada notificación lleva a una ruta que existe (nunca «página no encontrada»)', () {
+      final c = contenedor(RedFalsa({}), AlmacenMemoria());
+      final config = c.read(rutasProvider).configuration;
+      bool existe(String ruta) => config.findMatch(Uri.parse(ruta)).isNotEmpty;
+      for (final tipo in ['recordatorios', 'resumen', 'por_aprobar', 'cita_proxima', 'nueva_cita', 'otro', null]) {
+        final ruta = rutaDeAviso(tipo);
+        expect(ruta == null || existe(ruta), isTrue, reason: '$tipo → $ruta');
+      }
+      for (final datos in [
+        {'tipo': 'campana', 'negocio': 'glowclinic'},
+        {'tipo': 'sello', 'negocio': 'glowclinic'},
+        {'tipo': 'tarjeta_llena', 'negocio': 'glowclinic'},
+        {'tipo': 'cita', 'cita_id': '7', 'negocio': 'glowclinic'},
+        {'tipo': 'recordatorio', 'cita_id': '7'},
+        {'tipo': 'desconocido'},
+      ]) {
+        final ruta = rutaDeAvisoCliente(datos);
+        expect(existe(ruta), isTrue, reason: '$datos → $ruta');
+      }
+    });
   });
 
   group('modelos', () {
@@ -366,6 +391,29 @@ void main() {
       expect(find.text('Cancelar cita'), findsOneWidget);
     });
 
+    testWidgets('el negocio escribe las notas de una cita desde sus acciones', (t) async {
+      Object? cuerpo;
+      final red = RedFalsa({
+        'POST /auth/refresh': (_) => ok(tokens),
+        'GET /agenda': (_) => ok(agendaJson([citaJson(1, 'programada', 'Rosa')])),
+        'PUT /citas/1/notas': (o) {
+          cuerpo = o.data is String ? jsonDecode(o.data as String) : o.data;
+          return ok({'cita_id': 1, 'notas': 'Piel sensible'});
+        },
+      });
+      await abrirHoy(t, red, AlmacenMemoria()..datos[claveRenovacion] = 'r1');
+      await t.tap(find.text('Rosa').first);
+      await t.pumpAndSettle();
+      await t.scrollUntilVisible(find.byKey(const Key('editar-notas')), 100, scrollable: find.byType(Scrollable).last);
+      await t.tap(find.byKey(const Key('editar-notas')));
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const Key('campo-notas')), 'Piel sensible');
+      await t.tap(find.byKey(const Key('guardar-notas')));
+      await t.pumpAndSettle();
+      expect(cuerpo, {'notas': 'Piel sensible'});
+      expect(find.text('Notas guardadas'), findsOneWidget);
+    });
+
     testWidgets('un error al iniciar se avisa y deja el botón como estaba', (t) async {
       final red = RedFalsa({
         'POST /auth/refresh': (_) => ok(tokens),
@@ -405,7 +453,7 @@ void main() {
       await abrirHoy(t, red, almacen);
       expect(find.textContaining('Sin conexión'), findsOneWidget);
       expect(find.text('Iniciar'), findsNothing);
-      expect(find.text('Nueva cita'), findsNothing);
+      expect(find.text('Reserva rápida'), findsNothing);
     });
 
     testWidgets('Confirmar y avisar confirma la reserva y abre WhatsApp con el mensaje', (t) async {
@@ -547,7 +595,7 @@ void main() {
       expect(guardado?['indicaciones'], 'Come antes de venir.');
     });
 
-    testWidgets('vista de mes con el número de citas por día', (t) async {
+    testWidgets('el calendario marca los días con citas', (t) async {
       final red = RedFalsa({
         'POST /auth/refresh': (_) => ok(tokens),
         'GET /agenda': (_) => ok(hoy),
@@ -567,9 +615,7 @@ void main() {
         }),
       });
       await abrirHoy(t, red, AlmacenMemoria()..datos[claveRenovacion] = 'r1');
-      await t.tap(find.byIcon(Icons.date_range));
-      await t.pumpAndSettle();
-      await t.tap(find.text('Mes'));
+      await t.tap(find.byIcon(Icons.calendar_month_outlined));
       await t.pumpAndSettle();
       expect(red.llamadas, contains('GET /agenda/mes'));
       expect(find.byKey(const Key('citas-2026-11-09')), findsOneWidget);

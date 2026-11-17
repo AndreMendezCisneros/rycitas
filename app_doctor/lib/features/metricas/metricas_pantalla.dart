@@ -6,6 +6,8 @@ import '../../core/api.dart';
 import '../../core/fechas.dart';
 import '../../core/negocio.dart';
 import '../../shared/comunes.dart';
+import '../../shared/diseno/anillo.dart';
+import '../../shared/diseno/paleta.dart';
 
 class Indicadores {
   const Indicadores(this.d);
@@ -97,6 +99,7 @@ class _MetricasPantallaState extends ConsumerState<MetricasPantalla> {
                     ),
                   ),
                 ),
+              _Metas(actual: a, anterior: b),
               _Fila('Citas', '${a.citas}', anterior: '${b.citas}', key: const Key('kpi-citas')),
               _Fila(
                 'Reservas web confirmadas',
@@ -272,4 +275,113 @@ class _DuracionPorServicio extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Metas del mes en anillos: superar las citas del mes anterior, asistencia y ocupación. Sin «perdiste»: solo cuánto
+/// falta. Con todo el mes sin inasistencias, una insignia.
+class _Metas extends StatelessWidget {
+  const _Metas({required this.actual, required this.anterior});
+
+  final Indicadores actual;
+  final Indicadores anterior;
+
+  @override
+  Widget build(BuildContext context) {
+    final atendidas = actual.entero('atendidas');
+    final vistas = atendidas + actual.entero('no_vinieron');
+    final metaCitas = anterior.citas == 0 ? 1 : anterior.citas;
+    final asistencia = vistas == 0 ? null : atendidas / vistas;
+    final ocupacion = actual.valor('ocupacion_pct');
+    final sinFaltas = vistas > 0 && actual.entero('no_vinieron') == 0;
+    return Container(
+      key: const Key('metas-mes'),
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Paleta.borde),
+        boxShadow: Paleta.sombra(0.6),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Metas del mes', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _Meta(
+                valor: actual.citas / metaCitas,
+                centro: '${actual.citas}',
+                texto: actual.citas >= metaCitas && anterior.citas > 0
+                    ? '¡Superaste el mes pasado!'
+                    : 'Citas · meta ${anterior.citas == 0 ? '—' : metaCitas}',
+              ),
+              _Meta(
+                valor: asistencia ?? 0,
+                centro: asistencia == null ? '—' : '${(asistencia * 100).round()}%',
+                texto: 'Asistencia',
+              ),
+              _Meta(
+                valor: (ocupacion ?? 0) / 100,
+                centro: ocupacion == null ? '—' : '${ocupacion.round()}%',
+                texto: 'Ocupación',
+              ),
+            ],
+          ),
+          if (sinFaltas) ...[
+            const SizedBox(height: 14),
+            Container(
+              key: const Key('insignia-sin-faltas'),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(gradient: Paleta.degradado, borderRadius: BorderRadius.circular(20)),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.emoji_events_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 6),
+                  Text(
+                    'Mes sin inasistencias',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Meta extends StatelessWidget {
+  const _Meta({required this.valor, required this.centro, required this.texto});
+
+  final double valor;
+  final String centro;
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 96,
+    child: Column(
+      children: [
+        AnilloProgreso(
+          valor: valor,
+          tam: 76,
+          centro: Text(
+            centro,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Paleta.texto),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          texto,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 12, color: Paleta.textoSuave, fontWeight: FontWeight.w600),
+        ),
+      ],
+    ),
+  );
 }
