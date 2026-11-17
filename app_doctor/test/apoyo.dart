@@ -1,8 +1,11 @@
 import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:denticita_doctor/core/api.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
@@ -100,3 +103,34 @@ Map<String, dynamic> agendaJson(List<Map<String, dynamic>> citas, {int retraso =
   ],
   'generado_en': '2026-11-09T08:00:00-05:00',
 };
+
+/// Capturas de pantalla para revisar el diseño a ojo: solo con la variable `CAPTURAS=carpeta`.
+final carpetaCapturas = Platform.environment['CAPTURAS'];
+
+/// Fuentes reales (Jakarta e íconos) para que las capturas se vean como en el teléfono.
+Future<void> cargarFuentesReales() async {
+  if (carpetaCapturas == null) return;
+  Future<ByteData> leer(String ruta) async => ByteData.sublistView(File(ruta).readAsBytesSync());
+  final jakarta = FontLoader('Jakarta');
+  for (final peso in [400, 500, 600, 700, 800]) {
+    jakarta.addFont(leer('assets/fuentes/PlusJakartaSans-$peso.ttf'));
+  }
+  await jakarta.load();
+  final raiz = Platform.environment['FLUTTER_ROOT'] ?? 'C:/Flutter/flutter';
+  final iconos = FontLoader('MaterialIcons')
+    ..addFont(leer('$raiz/bin/cache/artifacts/material_fonts/materialicons-regular.otf'));
+  await iconos.load();
+}
+
+Future<void> capturar(WidgetTester t, String nombre) async {
+  if (carpetaCapturas == null) return;
+  await t.pump(const Duration(seconds: 2));
+  final vista = t.binding.renderViews.first;
+  await t.runAsync(() async {
+    final capa = vista.debugLayer! as OffsetLayer;
+    final dpr = t.view.devicePixelRatio;
+    final imagen = await capa.toImage(Offset.zero & (vista.size * dpr), pixelRatio: 1.2 / dpr);
+    final bytes = await imagen.toByteData(format: ui.ImageByteFormat.png);
+    File('$carpetaCapturas/$nombre.png').writeAsBytesSync(bytes!.buffer.asUint8List());
+  });
+}

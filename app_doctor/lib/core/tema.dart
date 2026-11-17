@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../shared/diseno/paleta.dart';
+import '../shared/diseno/tonos.dart';
 
 /// Frambuesa de RyCitas. El color propio del negocio ya no tiñe la app: es solo un acento en su ficha.
 const colorMarca = Paleta.frambuesa;
@@ -14,7 +15,7 @@ const fuente = 'Jakarta';
 class ColoresEstado {
   static Color de(String estado, ColorScheme esquema) => switch (estado) {
     'por_aprobar' || 'pendiente' => Paleta.ambar,
-    'programada' => Paleta.frambuesa,
+    'programada' => esquema.primary,
     'en_curso' => Paleta.verde,
     'terminada' => Paleta.gris,
     'no_asistio' => const Color(0xFF6B5A62),
@@ -22,50 +23,77 @@ class ColoresEstado {
   };
 }
 
-/// Diseño «blanco y frambuesa»: fondo blanco, tarjetas de 24 px con sombra rosada, tipografía Plus Jakarta Sans y
-/// botones de 52 px (la app se usa con una mano, entre cliente y cliente). Siempre claro: es parte de la marca.
-ThemeData temaRyCitas() {
-  const brillo = Brightness.light;
-  final esquema = ColorScheme.fromSeed(
-    seedColor: Paleta.frambuesa,
-    brightness: brillo,
-    primary: Paleta.frambuesa,
-    secondary: Paleta.rojo,
-    surface: Paleta.fondo,
-    onSurface: Paleta.texto,
-  ).copyWith(
-    primaryContainer: Paleta.rosa,
-    onPrimaryContainer: Paleta.frambuesaOscura,
-    onSurfaceVariant: Paleta.textoSuave,
-    outlineVariant: Paleta.borde,
-    surfaceContainerLowest: Colors.white,
-    surfaceContainerLow: Paleta.superficie,
-    surfaceContainer: Paleta.rosaClaro,
-    surfaceContainerHigh: Paleta.rosaClaro,
-    surfaceContainerHighest: Paleta.rosa,
-  );
+/// Diseño «blanco y frambuesa» (o «noche y frambuesa» en oscuro): tarjetas de 24 px, tipografía Plus Jakarta Sans
+/// y botones de 52 px (la app se usa con una mano, entre cliente y cliente).
+ThemeData temaRyCitas([Brightness brillo = Brightness.light]) {
+  final oscuro = brillo == Brightness.dark;
+  final t = oscuro ? Tonos.oscuro : Tonos.claro;
+  final esquema =
+      ColorScheme.fromSeed(
+        seedColor: Paleta.frambuesa,
+        brightness: brillo,
+        primary: t.acento,
+        onPrimary: oscuro ? const Color(0xFF3B0A20) : Colors.white,
+        secondary: Paleta.rojo,
+        surface: t.fondo,
+        onSurface: t.texto,
+      ).copyWith(
+        primaryContainer: t.rosa,
+        onPrimaryContainer: t.acentoFuerte,
+        onSurfaceVariant: t.textoSuave,
+        outline: t.textoSuave,
+        outlineVariant: t.borde,
+        surfaceContainerLowest: t.superficie,
+        surfaceContainerLow: t.superficieSuave,
+        surfaceContainer: t.rosaClaro,
+        surfaceContainerHigh: t.rosaClaro,
+        surfaceContainerHighest: t.rosa,
+        secondaryContainer: t.rosa,
+        onSecondaryContainer: t.acentoFuerte,
+        tertiaryContainer: t.ambarFondo,
+        onTertiaryContainer: t.ambarTexto,
+      );
   const altoBoton = Size(64, 52);
   final forma = RoundedRectangleBorder(borderRadius: BorderRadius.circular(18));
   const textoBoton = TextStyle(fontFamily: fuente, fontSize: 16, fontWeight: FontWeight.w700);
-  final base = ThemeData(useMaterial3: true, colorScheme: esquema, fontFamily: fuente, brightness: brillo);
-  final textos = base.textTheme.copyWith(
-    headlineLarge: base.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -1),
-    headlineMedium: base.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8),
-    headlineSmall: base.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
-    titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
-    titleMedium: base.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-    titleSmall: base.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-    labelLarge: base.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+  final base = ThemeData(
+    useMaterial3: true,
+    colorScheme: esquema,
+    fontFamily: fuente,
+    brightness: brillo,
+    extensions: [t],
   );
+  final textos = base.textTheme
+      .apply(bodyColor: t.texto, displayColor: t.texto)
+      .copyWith(
+        headlineLarge: base.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -1),
+        headlineMedium: base.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8),
+        headlineSmall: base.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
+        titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
+        titleMedium: base.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        titleSmall: base.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        labelLarge: base.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+      );
   return base.copyWith(
     textTheme: textos,
+    // Íconos sueltos con el color del texto: nunca quedan claros sobre blanco ni oscuros sobre negro.
+    iconTheme: IconThemeData(color: t.textoSuave),
     scaffoldBackgroundColor: esquema.surface,
     appBarTheme: AppBarTheme(
       backgroundColor: esquema.surface,
       surfaceTintColor: Colors.transparent,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: textos.titleLarge?.copyWith(color: esquema.onSurface, fontFamily: fuente),
+      // Tamaño explícito: el estilo del tema aún no trae tamaño aquí y la barra caía a 14 px.
+      titleTextStyle: TextStyle(
+        fontFamily: fuente,
+        fontSize: 21,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.3,
+        color: esquema.onSurface,
+      ),
+      iconTheme: IconThemeData(color: t.texto),
+      actionsIconTheme: IconThemeData(color: t.texto),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(minimumSize: altoBoton, shape: forma, textStyle: textoBoton, elevation: 0),
@@ -78,7 +106,9 @@ ThemeData temaRyCitas() {
         side: BorderSide(color: esquema.outlineVariant, width: 1.5),
       ),
     ),
-    textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(textStyle: textoBoton, shape: forma)),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(textStyle: textoBoton, shape: forma),
+    ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: esquema.primary,
       foregroundColor: esquema.onPrimary,
@@ -88,13 +118,13 @@ ThemeData temaRyCitas() {
       extendedTextStyle: textoBoton,
     ),
     cardTheme: CardThemeData(
-      color: Colors.white,
+      color: t.superficie,
       elevation: 0,
       margin: EdgeInsets.zero,
       shadowColor: Paleta.frambuesa.withValues(alpha: 0.12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: Paleta.borde),
+        side: BorderSide(color: t.borde),
       ),
     ),
     pageTransitionsTheme: const PageTransitionsTheme(
@@ -124,7 +154,11 @@ ThemeData temaRyCitas() {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: Paleta.superficie,
+      fillColor: t.superficieSuave,
+      labelStyle: TextStyle(color: t.textoSuave),
+      hintStyle: TextStyle(color: t.textoSuave),
+      prefixIconColor: t.textoSuave,
+      suffixIconColor: t.textoSuave,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
@@ -142,16 +176,18 @@ ThemeData temaRyCitas() {
     chipTheme: ChipThemeData(
       shape: const StadiumBorder(),
       side: BorderSide(color: esquema.outlineVariant),
-      backgroundColor: Colors.white,
-      selectedColor: Paleta.rosa,
-      checkmarkColor: Paleta.frambuesa,
-      labelStyle: const TextStyle(fontFamily: fuente, fontWeight: FontWeight.w600),
+      backgroundColor: t.superficie,
+      selectedColor: t.rosa,
+      checkmarkColor: t.acento,
+      labelStyle: TextStyle(fontFamily: fuente, fontWeight: FontWeight.w600, color: t.texto),
+      secondaryLabelStyle: TextStyle(fontFamily: fuente, fontWeight: FontWeight.w700, color: t.acentoFuerte),
+      iconTheme: IconThemeData(color: t.acento, size: 18),
     ),
     bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: Colors.white,
+      backgroundColor: t.superficie,
       surfaceTintColor: Colors.transparent,
       showDragHandle: true,
-      dragHandleColor: Paleta.borde,
+      dragHandleColor: t.borde,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
     ),
     dialogTheme: DialogThemeData(
@@ -161,7 +197,9 @@ ThemeData temaRyCitas() {
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: Paleta.texto,
+      backgroundColor: oscuro ? const Color(0xFFF7ECF0) : Paleta.texto,
+      contentTextStyle: TextStyle(fontFamily: fuente, color: oscuro ? Paleta.texto : Colors.white),
+      actionTextColor: oscuro ? Paleta.frambuesa : const Color(0xFFFF8FB8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),
     listTileTheme: ListTileThemeData(

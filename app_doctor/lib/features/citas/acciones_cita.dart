@@ -14,19 +14,13 @@ import '../agenda/agenda_controlador.dart';
 import 'selector_hora.dart';
 
 /// Hoja con lo que se puede hacer con una cita: confirmar, escribir, llamar, mover o cancelar (RF-30).
-Future<void> mostrarAccionesCita(
-  BuildContext context,
-  WidgetRef ref,
-  Cita cita, {
-  VoidCallback? alCambiar,
-}) async {
+Future<void> mostrarAccionesCita(BuildContext context, WidgetRef ref, Cita cita, {VoidCallback? alCambiar}) async {
   final puedeCambiar = cita.programada || cita.porAprobar;
   final negocio = ref.read(negocioActualProvider);
   final voc = negocio.voc;
   final detalle = [
     '${cita.tratamiento.nombre} · ${Fechas.diaHora(cita.inicio)}',
-    if (negocio.porProfesional && cita.profesional != null)
-      'Con ${cita.profesional!.nombre}',
+    if (negocio.porProfesional && cita.profesional != null) 'Con ${cita.profesional!.nombre}',
     if (cita.precioTexto != null) cita.precioTexto!,
     cita.paciente.celular,
   ].join('\n');
@@ -34,26 +28,18 @@ Future<void> mostrarAccionesCita(
   final eleccion = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
-    constraints: BoxConstraints(
-      maxHeight: MediaQuery.sizeOf(context).height * 0.85,
-    ),
+    constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.85),
     builder: (hoja) => SafeArea(
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              title: Text(
-                cita.paciente.nombre,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
+              title: Text(cita.paciente.nombre, style: const TextStyle(fontWeight: FontWeight.w700)),
               subtitle: Text(detalle),
             ),
             if (cita.notas.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                child: NotaCita(cita.notas),
-              ),
+              Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 10), child: NotaCita(cita.notas)),
             const Divider(height: 1),
             if (cita.porAprobar)
               ListTile(
@@ -114,27 +100,15 @@ Future<void> mostrarAccionesCita(
     case 'confirmar':
       await confirmarCita(context, ref, cita, alCambiar: alCambiar);
     case 'llego':
-      final error = await ref
-          .read(agendaProvider.notifier)
-          .accion(AccionConsulta.llego, cita.id);
+      final error = await ref.read(agendaProvider.notifier).accion(AccionConsulta.llego, cita.id);
       if (error != null && context.mounted) avisar(context, error);
       alCambiar?.call();
     case 'rechazar':
-      await ejecutarDecision(
-        context,
-        ref,
-        cita.id,
-        'rechazar',
-        'Reserva rechazada',
-        alCambiar: alCambiar,
-      );
+      await ejecutarDecision(context, ref, cita.id, 'rechazar', 'Reserva rechazada', alCambiar: alCambiar);
     case 'notas':
       await editarNotasCita(context, ref, cita, alCambiar: alCambiar);
     case 'whatsapp':
-      await abrirWhatsapp(
-        context,
-        'https://wa.me/${cita.paciente.celular.replaceAll('+', '')}',
-      );
+      await abrirWhatsapp(context, 'https://wa.me/${cita.paciente.celular.replaceAll('+', '')}');
     case 'llamar':
       await launchUrl(Uri.parse('tel:${cita.paciente.celular}'));
     case 'mover':
@@ -157,14 +131,7 @@ Future<void> mostrarAccionesCita(
         ),
       );
       if (inicio != null && context.mounted) {
-        await _ejecutar(
-          context,
-          ref,
-          '/citas/${cita.id}/reprogramar',
-          {'inicio': inicio},
-          'Cita movida',
-          alCambiar,
-        );
+        await _ejecutar(context, ref, '/citas/${cita.id}/reprogramar', {'inicio': inicio}, 'Cita movida', alCambiar);
       }
     case 'cancelar':
       final ok = await confirmar(
@@ -174,40 +141,20 @@ Future<void> mostrarAccionesCita(
         accion: 'Cancelar cita',
       );
       if (ok && context.mounted) {
-        await _ejecutar(
-          context,
-          ref,
-          '/citas/${cita.id}/cancelar',
-          null,
-          'Cita cancelada',
-          alCambiar,
-        );
+        await _ejecutar(context, ref, '/citas/${cita.id}/cancelar', null, 'Cita cancelada', alCambiar);
       }
   }
 }
 
 /// «Confirmar y avisar». Si el cliente ofreció otro precio, primero se acepta o se pone el precio final.
-Future<void> confirmarCita(
-  BuildContext context,
-  WidgetRef ref,
-  Cita cita, {
-  VoidCallback? alCambiar,
-}) async {
+Future<void> confirmarCita(BuildContext context, WidgetRef ref, Cita cita, {VoidCallback? alCambiar}) async {
   Map<String, dynamic>? cuerpo;
   if (cita.tieneOferta) {
     final precio = await elegirPrecio(context, cita);
     if (precio == null || !context.mounted) return;
     cuerpo = {'precio_acordado': precio};
   }
-  await _ejecutar(
-    context,
-    ref,
-    '/citas/${cita.id}/aprobar',
-    cuerpo,
-    'Cita confirmada',
-    alCambiar,
-    directo: true,
-  );
+  await _ejecutar(context, ref, '/citas/${cita.id}/aprobar', cuerpo, 'Cita confirmada', alCambiar, directo: true);
 }
 
 /// Devuelve el precio en soles, o null si se canceló.
@@ -225,14 +172,8 @@ Future<double?> elegirPrecio(BuildContext context, Cita cita) async {
                   'ese precio irá en el mensaje de confirmación.',
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogo, 'otro'),
-          child: const Text('Poner otro precio'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(dialogo, ofrecido),
-          child: Text('Aceptar ${soles(ofrecido)}'),
-        ),
+        TextButton(onPressed: () => Navigator.pop(dialogo, 'otro'), child: const Text('Poner otro precio')),
+        FilledButton(onPressed: () => Navigator.pop(dialogo, ofrecido), child: Text('Aceptar ${soles(ofrecido)}')),
       ],
     ),
   );
@@ -242,9 +183,7 @@ Future<double?> elegirPrecio(BuildContext context, Cita cita) async {
 }
 
 Future<double?> _precioManual(BuildContext context, int sugerido) {
-  final campo = TextEditingController(
-    text: (sugerido / 100).toStringAsFixed(sugerido % 100 == 0 ? 0 : 2),
-  );
+  final campo = TextEditingController(text: (sugerido / 100).toStringAsFixed(sugerido % 100 == 0 ? 0 : 2));
   return showDialog<double>(
     context: context,
     builder: (dialogo) {
@@ -260,17 +199,12 @@ Future<double?> _precioManual(BuildContext context, int sugerido) {
           controller: campo,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-          ],
+          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
           decoration: const InputDecoration(prefixText: 'S/ '),
           onSubmitted: (_) => listo(),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogo),
-            child: const Text('Cancelar'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(dialogo), child: const Text('Cancelar')),
           FilledButton(onPressed: listo, child: const Text('Confirmar')),
         ],
       );
@@ -286,19 +220,10 @@ Future<void> ejecutarDecision(
   String titulo, {
   VoidCallback? alCambiar,
   bool directo = false,
-}) => _ejecutar(
-  context,
-  ref,
-  '/citas/$citaId/$accion',
-  null,
-  titulo,
-  alCambiar,
-  directo: directo,
-);
+}) => _ejecutar(context, ref, '/citas/$citaId/$accion', null, titulo, alCambiar, directo: directo);
 
 List<Siguiente> siguientesDe(Map<String, dynamic> datos) => [
-  for (final s in (datos['siguientes'] as List? ?? const []))
-    Siguiente.fromJson(s as Map<String, dynamic>),
+  for (final s in (datos['siguientes'] as List? ?? const [])) Siguiente.fromJson(s as Map<String, dynamic>),
 ];
 
 Future<void> _ejecutar(
@@ -312,9 +237,7 @@ Future<void> _ejecutar(
 }) async {
   try {
     final datos = await ref.read(apiProvider).post(ruta, cuerpo);
-    ref
-        .read(agendaProvider.notifier)
-        .aplicarAgenda(datos['agenda'] as Map<String, dynamic>);
+    ref.read(agendaProvider.notifier).aplicarAgenda(datos['agenda'] as Map<String, dynamic>);
     alCambiar?.call();
     if (!context.mounted) return;
     final url = datos['whatsapp_url'] as String?;

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import 'paleta.dart';
 import 'vidrio.dart';
+import 'tonos.dart';
 
 /// Lo que se marca en un día del calendario.
 class MarcaDia {
@@ -17,8 +18,7 @@ class MarcaDia {
   final List<Color> colores;
 }
 
-String fechaClave(DateTime d) =>
-    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+String fechaClave(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
 String tituloMes(DateTime mes) {
   final texto = DateFormat('MMMM yyyy', 'es').format(mes);
@@ -82,11 +82,7 @@ class _CalendarioMesState extends State<CalendarioMes> {
             Expanded(
               child: AnimatedSwitcher(
                 duration: sinAnimar ? Duration.zero : const Duration(milliseconds: 250),
-                child: Text(
-                  tituloMes(widget.mes),
-                  key: ValueKey(widget.mes),
-                  style: textos.titleLarge,
-                ),
+                child: Text(tituloMes(widget.mes), key: ValueKey(widget.mes), style: textos.titleLarge),
               ),
             ),
             ...widget.acciones,
@@ -103,7 +99,7 @@ class _CalendarioMesState extends State<CalendarioMes> {
                 child: Center(
                   child: Text(
                     d,
-                    style: textos.labelMedium?.copyWith(color: Paleta.textoSuave, fontWeight: FontWeight.w700),
+                    style: textos.labelMedium?.copyWith(color: context.tonos.textoSuave, fontWeight: FontWeight.w700),
                   ),
                 ),
               ),
@@ -131,10 +127,7 @@ class _CalendarioMesState extends State<CalendarioMes> {
                 ),
               );
             },
-            layoutBuilder: (actual, previos) => Stack(
-              alignment: Alignment.topCenter,
-              children: [...previos, ?actual],
-            ),
+            layoutBuilder: (actual, previos) => Stack(alignment: Alignment.topCenter, children: [...previos, ?actual]),
             child: _Cuadricula(
               key: ValueKey(widget.mes),
               mes: widget.mes,
@@ -153,9 +146,13 @@ class _CalendarioMesState extends State<CalendarioMes> {
         SizedBox(
           height: 8,
           child: widget.cargando
-              ? const Padding(
+              ? Padding(
                   padding: EdgeInsets.only(top: 6),
-                  child: LinearProgressIndicator(minHeight: 2, color: Paleta.frambuesa, backgroundColor: Paleta.rosa),
+                  child: LinearProgressIndicator(
+                    minHeight: 2,
+                    color: context.tonos.acento,
+                    backgroundColor: context.tonos.rosa,
+                  ),
                 )
               : null,
         ),
@@ -175,7 +172,7 @@ class _Flecha extends StatelessWidget {
   Widget build(BuildContext context) => IconButton.filledTonal(
     tooltip: tooltip,
     onPressed: alTocar,
-    style: IconButton.styleFrom(backgroundColor: Paleta.rosa, foregroundColor: Paleta.frambuesa),
+    style: IconButton.styleFrom(backgroundColor: context.tonos.rosa, foregroundColor: context.tonos.acento),
     icon: Icon(icono),
   );
 }
@@ -268,15 +265,15 @@ class _CeldaDia extends StatelessWidget {
     final fondo = elegido
         ? null
         : bloqueo
-        ? const Color(0xFFF1ECEE)
+        ? context.tonos.borde
         : citas > 0
-        ? Color.lerp(Paleta.rosaClaro, Paleta.rosa, lleno.clamp(0, 1))
+        ? Color.lerp(context.tonos.rosaClaro, context.tonos.rosa, lleno.clamp(0, 1))
         : null;
     final colorNumero = elegido
         ? Colors.white
         : !activo
-        ? Paleta.textoSuave.withValues(alpha: 0.45)
-        : Paleta.texto;
+        ? context.tonos.textoSuave.withValues(alpha: 0.45)
+        : context.tonos.texto;
     final puntos = (m?.colores ?? const <Color>[]).take(3).toList();
     return Semantics(
       button: activo,
@@ -299,9 +296,15 @@ class _CeldaDia extends StatelessWidget {
                 color: fondo,
                 gradient: elegido ? Paleta.degradado : null,
                 borderRadius: BorderRadius.circular(16),
-                border: esHoy && !elegido ? Border.all(color: Paleta.frambuesa, width: 1.6) : null,
+                border: esHoy && !elegido ? Border.all(color: context.tonos.acento, width: 1.6) : null,
                 boxShadow: elegido
-                    ? [BoxShadow(color: Paleta.frambuesa.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 5))]
+                    ? [
+                        BoxShadow(
+                          color: context.tonos.acento.withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          offset: const Offset(0, 5),
+                        ),
+                      ]
                     : null,
               ),
               child: Column(
@@ -313,7 +316,7 @@ class _CeldaDia extends StatelessWidget {
                       fontWeight: esHoy || elegido ? FontWeight.w800 : FontWeight.w600,
                       color: colorNumero,
                       decoration: bloqueo && citas == 0 ? TextDecoration.lineThrough : null,
-                      decorationColor: Paleta.textoSuave,
+                      decorationColor: context.tonos.textoSuave,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -330,7 +333,7 @@ class _CeldaDia extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
-                                    color: elegido ? Colors.white : Paleta.frambuesa,
+                                    color: elegido ? Colors.white : context.tonos.acento,
                                   ),
                                 )
                               else
@@ -384,9 +387,13 @@ class LeyendaCalendario extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
             const SizedBox(width: 6),
-            Text(texto, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Paleta.textoSuave)),
+            Text(texto, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.tonos.textoSuave)),
           ],
         ),
     ],

@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:denticita_doctor/core/api.dart';
+import 'package:denticita_doctor/core/apariencia.dart';
 import 'package:denticita_doctor/core/fechas.dart';
 import 'package:denticita_doctor/features/auth/bloqueo.dart';
 import 'package:denticita_doctor/main.dart';
@@ -99,6 +101,7 @@ void main() {
     TestWidgetsFlutterBinding.ensureInitialized();
     zonas.initializeTimeZones();
     await initializeDateFormatting('es');
+    await cargarFuentesReales();
   });
 
   final hoy = agendaJson([conBarbero(citaJson(1, 'programada', 'Rosa Paz'))]);
@@ -621,5 +624,116 @@ void main() {
 
   test('DioException no se escapa como tal', () {
     expect(ApiCliente.errorDe(DioException(requestOptions: RequestOptions())).sinConexion, isTrue);
+  });
+
+  testWidgets('el modo oscuro se elige en Ajustes y queda guardado', (t) async {
+    final red = RedFalsa({
+      'POST /auth/refresh': (_) => ok(tokens),
+      'GET /negocio': (_) => ok(negocioJson()),
+      'GET /agenda': (_) => ok(hoy),
+    });
+    final almacen = conSesion();
+    await abrir(t, red, almacen);
+    await t.tap(find.text('Ajustes'));
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.text('Oscuro'), 200, scrollable: find.byType(Scrollable).first);
+    await t.tap(find.text('Oscuro'));
+    await t.pumpAndSettle();
+    expect(Theme.of(t.element(find.text('Ajustes').first)).brightness, Brightness.dark);
+    expect(almacen.datos[claveTema], 'oscuro');
+  });
+
+  testWidgets('capturas del modo negocio', (t) async {
+    if (carpetaCapturas == null) return;
+    final tema = Platform.environment['TEMA'] ?? 'claro';
+    fijarReloj(10, 0);
+    final citas = [
+      conBarbero({...citaJson(1, 'en_curso', 'Rosa Paz', hora: '09:30'), 'notas': 'Degradado bajo, traigo foto'}),
+      conBarbero(citaJson(2, 'programada', 'Luis Quispe', hora: '10:30')),
+      conBarbero(citaJson(3, 'por_aprobar', 'Ana Torres', hora: '11:00'), id: 2, nombre: 'Pedro'),
+      conBarbero(citaJson(4, 'terminada', 'Carlos Ruiz', hora: '08:30')),
+      conBarbero(citaJson(5, 'no_asistio', 'Marta Díaz', hora: '08:00')),
+    ];
+    final agenda = agendaJson(citas, porAprobar: 1);
+    final red = RedFalsa({
+      'POST /auth/refresh': (_) => ok(tokens),
+      'GET /negocio': (_) => ok(negocioJson()),
+      'GET /agenda': (_) => ok(agenda),
+      'GET /agenda/semana': (_) => ok({
+        'dias': [
+          {'fecha': '2026-11-09', 'citas': citas},
+          {'fecha': '2026-11-10', 'citas': []},
+        ],
+      }),
+      'GET /agenda/mes': (o) => ok({
+        'anio': 2026,
+        'mes': 11,
+        'dias': [
+          for (var d = 1; d <= 30; d++)
+            {
+              'fecha': '2026-11-${d.toString().padLeft(2, '0')}',
+              'citas': d % 3 == 0 ? d % 7 : (d == 9 ? 5 : 0),
+              'por_confirmar': d == 9 || d == 12 ? 1 : 0,
+              'bloqueo': d == 20,
+            },
+        ],
+      }),
+      'GET /pacientes': (_) => ok({
+        'pacientes': [
+          {'id': 1, 'nombre': 'Rosa Paz', 'celular': '+51987654321', 'verificado': true},
+          {'id': 2, 'nombre': 'Luis Quispe', 'celular': '+51912345678', 'inasistencias': 2},
+        ],
+      }),
+      'GET /metricas': (_) => ok({
+        'anio': 2026,
+        'mes': 11,
+        'actual': {'citas': 42, 'atendidas': 38, 'no_vinieron': 2, 'ocupacion_pct': 64, 'por_confirmar': 1},
+        'anterior': {'citas': 30, 'atendidas': 27, 'no_vinieron': 3, 'ocupacion_pct': 51},
+      }),
+      'GET /tratamientos': (_) => ok({
+        'tratamientos': [
+          {'id': 1, 'nombre': 'Corte clásico', 'duracion_min': 30},
+          {'id': 2, 'nombre': 'Barba', 'duracion_min': 20},
+        ],
+      }),
+      'GET /citas/disponibilidad': (_) => ok({
+        'dias': [
+          {
+            'fecha': '2026-11-09',
+            'horas': ['2026-11-09T12:00:00-05:00', '2026-11-09T12:30:00-05:00', '2026-11-09T16:00:00-05:00'],
+          },
+        ],
+      }),
+    });
+    await abrir(t, red, conSesion()..datos[claveTema] = tema);
+    t.view.physicalSize = const Size(1080, 2340);
+    t.view.devicePixelRatio = 2.75;
+    addTearDown(t.view.reset);
+    await t.pumpAndSettle();
+    await capturar(t, 'negocio-hoy-$tema');
+    await t.tap(find.text('Calendario'));
+    await t.pumpAndSettle();
+    await capturar(t, 'negocio-calendario-$tema');
+    await t.tap(find.text('9').first);
+    await t.pumpAndSettle();
+    await capturar(t, 'negocio-dia-$tema');
+    Navigator.of(t.element(find.byType(Scaffold).first)).pop();
+    await t.pumpAndSettle();
+    await t.tap(find.text('Clientes'));
+    await t.pumpAndSettle();
+    await capturar(t, 'negocio-clientes-$tema');
+    await t.tap(find.text('Ajustes'));
+    await t.pumpAndSettle();
+    await capturar(t, 'negocio-ajustes-$tema');
+    await t.tap(find.text('Mi mes'));
+    await t.pumpAndSettle();
+    await capturar(t, 'negocio-mimes-$tema');
+    await t.tap(find.byTooltip('Atrás').first);
+    await t.pumpAndSettle();
+    await t.tap(find.text('Hoy'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('fab-reserva-rapida')));
+    await t.pumpAndSettle();
+    await capturar(t, 'negocio-rapida-$tema');
   });
 }

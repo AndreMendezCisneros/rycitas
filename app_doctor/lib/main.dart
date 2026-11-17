@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:timezone/data/latest_10y.dart' as zonas;
 
+import 'core/apariencia.dart';
 import 'core/rutas.dart';
 import 'core/tema.dart';
 import 'features/auth/bloqueo.dart';
@@ -34,8 +35,9 @@ class RyCitasApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       title: 'RyCitas',
-      theme: temaRyCitas(),
-      themeMode: ThemeMode.light,
+      theme: temaRyCitas(Brightness.light),
+      darkTheme: temaRyCitas(Brightness.dark),
+      themeMode: ref.watch(aparienciaProvider),
       routerConfig: ref.watch(rutasProvider),
       builder: (_, child) => CapaBloqueo(child: child ?? const SizedBox.shrink()),
       debugShowCheckedModeBanner: false,

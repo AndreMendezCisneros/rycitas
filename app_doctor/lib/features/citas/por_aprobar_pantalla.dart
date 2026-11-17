@@ -8,6 +8,7 @@ import '../../shared/comunes.dart';
 import '../../shared/diseno/notas.dart';
 import '../../shared/modelos.dart';
 import 'acciones_cita.dart';
+import '../../shared/diseno/tonos.dart';
 
 final porAprobarProvider = FutureProvider.autoDispose<List<Cita>>((ref) async {
   final datos = await ref.read(apiProvider).get('/citas/por-aprobar');
@@ -104,21 +105,24 @@ class PorAprobarPantalla extends ConsumerWidget {
                           if (negocio.porProfesional && negocio.esGeneral && c.profesional != null)
                             dato(Icons.person_outline_rounded, 'Con ${c.profesional!.nombre}'),
                           if (c.cupon != null)
-                            dato(Icons.local_offer_outlined, 'Cupón ${c.cupon!.codigo}: ${c.cupon!.titulo} (${c.cupon!.descuento})'),
+                            dato(
+                              Icons.local_offer_outlined,
+                              'Cupón ${c.cupon!.codigo}: ${c.cupon!.titulo} (${c.cupon!.descuento})',
+                            ),
                           if (c.notas.isNotEmpty) NotaCita(c.notas),
                           if (c.tieneOferta)
                             Container(
                               margin: const EdgeInsets.only(top: 10),
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                                color: context.tonos.ambarFondo,
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Text(
                                 'Ofrece ${soles(c.precioOfrecido!)}'
                                 '${c.precioReferencia == null ? '' : ' (referencia ${soles(c.precioReferencia!)})'}',
                                 key: Key('oferta-${c.id}'),
-                                style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF92400E)),
+                                style: TextStyle(fontWeight: FontWeight.w800, color: context.tonos.ambarTexto),
                               ),
                             ),
                           const SizedBox(height: 16),

@@ -11,20 +11,12 @@ import '../../core/negocio.dart';
 import '../../shared/comunes.dart';
 import '../../shared/modelos.dart';
 
-final busquedaPacientesProvider = FutureProvider.autoDispose
-    .family<List<Paciente>, String>((ref, q) async {
-      final datos = await ref
-          .read(apiProvider)
-          .get('/pacientes', params: {'q': q});
-      return (datos['pacientes'] as List)
-          .map((p) => Paciente.fromJson(p as Map<String, dynamic>))
-          .toList();
-    });
+final busquedaPacientesProvider = FutureProvider.autoDispose.family<List<Paciente>, String>((ref, q) async {
+  final datos = await ref.read(apiProvider).get('/pacientes', params: {'q': q});
+  return (datos['pacientes'] as List).map((p) => Paciente.fromJson(p as Map<String, dynamic>)).toList();
+});
 
-final pacienteProvider = FutureProvider.autoDispose.family<Paciente, int>((
-  ref,
-  id,
-) async {
+final pacienteProvider = FutureProvider.autoDispose.family<Paciente, int>((ref, id) async {
   return Paciente.fromJson(await ref.read(apiProvider).get('/pacientes/$id'));
 });
 
@@ -47,10 +39,7 @@ class _PacientesPantallaState extends ConsumerState<PacientesPantalla> {
 
   void _alEscribir(String texto) {
     _espera?.cancel();
-    _espera = Timer(
-      const Duration(milliseconds: 300),
-      () => setState(() => _consulta = texto.trim()),
-    );
+    _espera = Timer(const Duration(milliseconds: 300), () => setState(() => _consulta = texto.trim()));
   }
 
   @override
@@ -76,20 +65,13 @@ class _PacientesPantallaState extends ConsumerState<PacientesPantalla> {
               // En listas desplazables: con el teclado abierto queda poco alto y una columna fija desbordaría.
               error: (e, _) => ListView(
                 children: [
-                  ErrorConReintento(
-                    error: e,
-                    alReintentar: () =>
-                        ref.invalidate(busquedaPacientesProvider(_consulta)),
-                  ),
+                  ErrorConReintento(error: e, alReintentar: () => ref.invalidate(busquedaPacientesProvider(_consulta))),
                 ],
               ),
               data: (lista) => lista.isEmpty
                   ? ListView(
                       children: [
-                        Vacio(
-                          'No encontramos ${vocDe(context).clientes}.',
-                          icono: Icons.person_search_rounded,
-                        ),
+                        Vacio('No encontramos ${vocDe(context).clientes}.', icono: Icons.person_search_rounded),
                       ],
                     )
                   : ListView(
@@ -120,11 +102,7 @@ class PacienteDetallePantalla extends ConsumerWidget {
 
   final int id;
 
-  Future<void> _cambiarBloqueo(
-    BuildContext context,
-    WidgetRef ref,
-    Paciente p,
-  ) async {
+  Future<void> _cambiarBloqueo(BuildContext context, WidgetRef ref, Paciente p) async {
     if (!p.bloqueado) {
       final ok = await confirmar(
         context,
@@ -135,9 +113,7 @@ class PacienteDetallePantalla extends ConsumerWidget {
       if (!ok) return;
     }
     try {
-      await ref.read(apiProvider).post('/pacientes/$id/bloquear', {
-        'bloqueado': !p.bloqueado,
-      });
+      await ref.read(apiProvider).post('/pacientes/$id/bloquear', {'bloqueado': !p.bloqueado});
       ref.invalidate(pacienteProvider(id));
     } on ApiError catch (e) {
       if (context.mounted) avisar(context, e.mensaje);
@@ -174,10 +150,7 @@ class PacienteDetallePantalla extends ConsumerWidget {
       appBar: AppBar(title: Text(Vocabulario.may(vocDe(context).cliente))),
       body: paciente.when(
         loading: () => const Cargando(),
-        error: (e, _) => ErrorConReintento(
-          error: e,
-          alReintentar: () => ref.invalidate(pacienteProvider(id)),
-        ),
+        error: (e, _) => ErrorConReintento(error: e, alReintentar: () => ref.invalidate(pacienteProvider(id))),
         data: (p) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -190,9 +163,7 @@ class PacienteDetallePantalla extends ConsumerWidget {
             const SizedBox(height: 16),
             OutlinedButton(
               onPressed: () => _cambiarBloqueo(context, ref, p),
-              child: Text(
-                p.bloqueado ? 'Desbloquear número' : 'Bloquear número',
-              ),
+              child: Text(p.bloqueado ? 'Desbloquear número' : 'Bloquear número'),
             ),
             const SizedBox(height: 24),
             Text('Historial', style: Theme.of(context).textTheme.titleMedium),

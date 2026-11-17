@@ -73,7 +73,13 @@ class _LoginPantallaState extends ConsumerState<LoginPantalla> {
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(24),
-                          boxShadow: [BoxShadow(color: colorMarca.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 8))],
+                          boxShadow: [
+                            BoxShadow(
+                              color: colorMarca.withValues(alpha: 0.35),
+                              blurRadius: 24,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(24),
@@ -151,7 +157,11 @@ class _LoginPantallaState extends ConsumerState<LoginPantalla> {
                                   ? const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.5)),
+                                        SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                                        ),
                                         SizedBox(width: 10),
                                         Text('Entrando…'),
                                       ],

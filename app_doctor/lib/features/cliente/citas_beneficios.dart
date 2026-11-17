@@ -16,6 +16,7 @@ import 'datos_cliente.dart';
 import 'gamificacion.dart';
 import 'lugares_hoja.dart';
 import 'widgets_cliente.dart';
+import '../../shared/diseno/tonos.dart';
 
 /// «Mis citas»: un calendario con todas sus citas (en todos los lugares) y la lista. Tocar un día o una cita abre
 /// sus detalles en una hoja flotante. Cancelar o mover lo hace el negocio: se le escribe.
@@ -153,8 +154,8 @@ class _MisCitasPantallaState extends ConsumerState<MisCitasPantalla> {
           ),
         ),
         const SizedBox(height: 12),
-        const LeyendaCalendario(
-          items: [(Paleta.frambuesa, 'Confirmada'), (Paleta.ambar, 'Por confirmar'), (Paleta.gris, 'Pasada')],
+        LeyendaCalendario(
+          items: [(context.tonos.acento, 'Confirmada'), (Paleta.ambar, 'Por confirmar'), (Paleta.gris, 'Pasada')],
         ),
         if (todas.isEmpty) ...[
           const SizedBox(height: 16),
@@ -181,7 +182,7 @@ class _MisCitasPantallaState extends ConsumerState<MisCitasPantalla> {
           if (citas.isEmpty)
             Text(
               pasado ? 'No tuviste citas este día.' : 'Este día lo tienes libre.',
-              style: const TextStyle(color: Paleta.textoSuave),
+              style: TextStyle(color: context.tonos.textoSuave),
             ),
           for (final c in citas)
             Padding(
@@ -247,7 +248,7 @@ class ProximaCitaTarjeta extends StatelessWidget {
             gradient: Paleta.degradado,
             borderRadius: BorderRadius.circular(26),
             boxShadow: [
-              BoxShadow(color: Paleta.frambuesa.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8)),
+              BoxShadow(color: context.tonos.acento.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8)),
             ],
           ),
           child: DefaultTextStyle.merge(
@@ -353,7 +354,7 @@ class _CitaCliente extends StatelessWidget {
                 width: 54,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: pasada ? Paleta.superficie : Paleta.rosa,
+                  color: pasada ? context.tonos.superficieSuave : context.tonos.rosa,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
@@ -363,7 +364,7 @@ class _CitaCliente extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
-                        color: pasada ? Paleta.textoSuave : Paleta.frambuesa,
+                        color: pasada ? context.tonos.textoSuave : context.tonos.acento,
                       ),
                     ),
                     Text(
@@ -371,7 +372,7 @@ class _CitaCliente extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: pasada ? Paleta.textoSuave : Paleta.frambuesaOscura,
+                        color: pasada ? context.tonos.textoSuave : context.tonos.acentoFuerte,
                       ),
                     ),
                   ],
@@ -385,7 +386,7 @@ class _CitaCliente extends StatelessWidget {
                     Text(negocio['nombre'] as String, style: Theme.of(context).textTheme.titleMedium),
                     Text(
                       '${cita['tratamiento']} · ${Fechas.hora(cita['inicio'] as String)}',
-                      style: const TextStyle(color: Paleta.textoSuave),
+                      style: TextStyle(color: context.tonos.textoSuave),
                     ),
                     const SizedBox(height: 6),
                     Row(
@@ -443,15 +444,15 @@ class DetalleCitaCliente extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Paleta.rosa, borderRadius: BorderRadius.circular(12)),
-            child: Icon(icono, size: 18, color: Paleta.frambuesa),
+            decoration: BoxDecoration(color: context.tonos.rosa, borderRadius: BorderRadius.circular(12)),
+            child: Icon(icono, size: 18, color: context.tonos.acento),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(titulo, style: textos.labelMedium?.copyWith(color: Paleta.textoSuave)),
+                Text(titulo, style: textos.labelMedium?.copyWith(color: context.tonos.textoSuave)),
                 Text(valor, style: textos.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
               ],
             ),
@@ -488,7 +489,7 @@ class DetalleCitaCliente extends StatelessWidget {
           ),
         if (cupon != null) fila(Icons.local_offer_rounded, 'Cupón', '${cupon['codigo']} · ${cupon['descuento']}'),
         if (notas.isNotEmpty) ...[
-          Text('Lo que pediste', style: textos.labelMedium?.copyWith(color: Paleta.textoSuave)),
+          Text('Lo que pediste', style: textos.labelMedium?.copyWith(color: context.tonos.textoSuave)),
           NotaCita(notas),
           const SizedBox(height: 12),
         ],
@@ -496,10 +497,10 @@ class DetalleCitaCliente extends StatelessWidget {
           Container(
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Paleta.ambarFondo, borderRadius: BorderRadius.circular(14)),
-            child: const Text(
+            decoration: BoxDecoration(color: context.tonos.ambarFondo, borderRadius: BorderRadius.circular(14)),
+            child: Text(
               'El lugar aún debe confirmar tu reserva. Te avisaremos con una notificación.',
-              style: TextStyle(color: Paleta.ambarTexto, fontWeight: FontWeight.w600),
+              style: TextStyle(color: context.tonos.ambarTexto, fontWeight: FontWeight.w600),
             ),
           ),
         Wrap(

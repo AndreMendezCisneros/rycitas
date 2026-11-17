@@ -176,10 +176,7 @@ class _TurnosPantallaState extends ConsumerState<TurnosPantalla> {
                 label: const Text('Agregar turno'),
               ),
             ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(_error!, style: TextStyle(color: esquema.error)),
-          ],
+          if (_error != null) ...[const SizedBox(height: 8), Text(_error!, style: TextStyle(color: esquema.error))],
           const SizedBox(height: 16),
           FilledButton(onPressed: _guardando ? null : _guardar, child: Text(_guardando ? 'Guardando…' : 'Guardar')),
         ],

@@ -9,6 +9,7 @@ import '../../shared/comunes.dart';
 import '../../shared/diseno/paleta.dart';
 import 'datos_cliente.dart';
 import 'gamificacion.dart' show lanzarConfeti;
+import '../../shared/diseno/tonos.dart';
 
 class AvisoSuave extends StatelessWidget {
   const AvisoSuave({super.key, required this.icono, required this.texto});
@@ -72,6 +73,8 @@ class FotoNegocio extends StatelessWidget {
             : Image.network(
                 url,
                 fit: BoxFit.cover,
+                // Se decodifica al tamaño en pantalla, no a la resolución original de la foto (menos memoria y saltos).
+                cacheWidth: (lado * MediaQuery.devicePixelRatioOf(context)).round(),
                 errorBuilder: (_, _, _) => ColoredBox(color: esquema.primaryContainer),
               ),
       ),
@@ -217,7 +220,9 @@ class _TarjetaSellosState extends State<TarjetaSellos> {
       decoration: BoxDecoration(
         gradient: Paleta.degradado,
         borderRadius: BorderRadius.circular(26),
-        boxShadow: [BoxShadow(color: Paleta.frambuesa.withValues(alpha: 0.28), blurRadius: 20, offset: const Offset(0, 8))],
+        boxShadow: [
+          BoxShadow(color: context.tonos.acento.withValues(alpha: 0.28), blurRadius: 20, offset: const Offset(0, 8)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,7 +275,7 @@ class _TarjetaSellosState extends State<TarjetaSellos> {
                       child: Icon(
                         i == meta - 1 ? Icons.card_giftcard_rounded : Icons.check_rounded,
                         size: 21,
-                        color: i < sellos ? Paleta.frambuesa : Colors.white.withValues(alpha: 0.7),
+                        color: i < sellos ? context.tonos.acento : Colors.white.withValues(alpha: 0.7),
                       ),
                     ),
                   ),

@@ -40,7 +40,15 @@ abstract final class Paleta {
 
   /// Sombra suave teñida de frambuesa: las tarjetas «flotan» sin verse sucias.
   static List<BoxShadow> sombra([double fuerza = 1]) => [
-    BoxShadow(color: frambuesa.withValues(alpha: 0.08 * fuerza), blurRadius: 24 * fuerza, offset: Offset(0, 8 * fuerza)),
-    BoxShadow(color: Colors.black.withValues(alpha: 0.03 * fuerza), blurRadius: 4, offset: const Offset(0, 1)),
+    BoxShadow(
+      color: frambuesa.withValues(alpha: 0.08 * fuerza),
+      blurRadius: 24 * fuerza,
+      offset: Offset(0, 8 * fuerza),
+    ),
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.03 * fuerza),
+      blurRadius: 4,
+      offset: const Offset(0, 1),
+    ),
   ];
 }

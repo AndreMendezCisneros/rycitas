@@ -19,6 +19,8 @@ import 'lugares_hoja.dart';
 import 'mascota.dart';
 import 'sesion_cliente.dart';
 import 'widgets_cliente.dart';
+import '../../shared/diseno/tonos.dart';
+import '../../core/apariencia.dart';
 
 /// «Inicio» del cliente: sus lugares (vinculados por su WhatsApp) y el buscador.
 class InicioClientePantalla extends ConsumerStatefulWidget {
@@ -101,7 +103,7 @@ class _InicioClienteState extends ConsumerState<InicioClientePantalla> {
                         Rubi(tam: 92, alTocar: () => _abrirRubi(nombre.isEmpty ? 'amiga' : nombre)),
                         Text(
                           'Tócame',
-                          style: textos.labelSmall?.copyWith(color: Paleta.frambuesa, fontWeight: FontWeight.w800),
+                          style: textos.labelSmall?.copyWith(color: context.tonos.acento, fontWeight: FontWeight.w800),
                         ),
                       ],
                     ),
@@ -118,7 +120,7 @@ class _InicioClienteState extends ConsumerState<InicioClientePantalla> {
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(
                     hintText: 'Busca por nombre o distrito',
-                    fillColor: Colors.white,
+                    fillColor: context.tonos.superficie,
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _q.isEmpty
                         ? null
@@ -167,7 +169,7 @@ class _Rubros extends ConsumerWidget {
         itemCount: rubros.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (_, i) => FilterChip(
-          avatar: Icon(iconoRubro(rubros[i]['clave'] as String), size: 18, color: Paleta.frambuesa),
+          avatar: Icon(iconoRubro(rubros[i]['clave'] as String), size: 18, color: context.tonos.acento),
           showCheckmark: false,
           label: Text(rubros[i]['nombre'] as String),
           selected: rubros[i]['clave'] == elegido,
@@ -309,7 +311,7 @@ class PerfilClientePantalla extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final yo = ref.watch(yoProvider);
     return Scaffold(
-      backgroundColor: Paleta.fondo,
+      backgroundColor: context.tonos.fondo,
       appBar: AppBar(title: const Text('Mi perfil')),
       body: yo.when(
         loading: () => const Cargando(),
@@ -327,7 +329,7 @@ class PerfilClientePantalla extends ConsumerWidget {
                     backgroundColor: Colors.white,
                     child: Text(
                       (d['nombre'] as String).characters.first.toUpperCase(),
-                      style: const TextStyle(color: Paleta.frambuesa, fontWeight: FontWeight.w800, fontSize: 22),
+                      style: TextStyle(color: context.tonos.acento, fontWeight: FontWeight.w800, fontSize: 22),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -374,6 +376,7 @@ class PerfilClientePantalla extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
+                  const SelectorTema(),
                   SwitchListTile(
                     key: const Key('cliente-promociones'),
                     title: const Text('Recibir promociones'),

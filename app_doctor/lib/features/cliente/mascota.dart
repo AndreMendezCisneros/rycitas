@@ -6,6 +6,7 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 
 import '../../shared/diseno/paleta.dart';
+import '../../shared/diseno/tonos.dart';
 
 /// Las caras de Rubí. Pocas y claras: así se anima bien y no se vuelve infantil.
 enum ExpresionRubi { contenta, pensando, celebra, dormida }
@@ -32,8 +33,14 @@ class Rubi extends StatefulWidget {
 }
 
 class _RubiState extends State<Rubi> with TickerProviderStateMixin {
-  late final AnimationController _respira = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600));
-  late final AnimationController _parpadeo = AnimationController(vsync: this, duration: const Duration(milliseconds: 180));
+  late final AnimationController _respira = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  );
+  late final AnimationController _parpadeo = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+  );
   late final AnimationController _salto = AnimationController.unbounded(vsync: this);
   bool _animar = true;
   Timer? _proximoParpadeo;
@@ -75,9 +82,7 @@ class _RubiState extends State<Rubi> with TickerProviderStateMixin {
     HapticFeedback.lightImpact();
     if (_animar) {
       // Resorte «Expressive»: sube rápido y rebota un poco al caer.
-      _salto.animateWith(
-        SpringSimulation(const SpringDescription(mass: 1, stiffness: 380, damping: 11), 0, 0, -2.6),
-      );
+      _salto.animateWith(SpringSimulation(const SpringDescription(mass: 1, stiffness: 380, damping: 11), 0, 0, -2.6));
       _despertar();
     }
     widget.alTocar?.call();
@@ -94,34 +99,37 @@ class _RubiState extends State<Rubi> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: widget.alTocar != null,
-      label: widget.etiqueta,
-      child: GestureDetector(
-        key: const Key('rubi'),
-        onTap: widget.alTocar == null ? null : _tocar,
-        child: AnimatedBuilder(
-          animation: Listenable.merge([_respira, _parpadeo, _salto]),
-          builder: (_, _) {
-            final respiro = Curves.easeInOut.transform(_respira.value);
-            final salto = _salto.value.clamp(-1.0, 1.0);
-            return Transform.translate(
-              offset: Offset(0, salto * widget.tam * 0.18),
-              child: Transform.scale(
-                scaleX: 1 + 0.015 * respiro - salto * 0.04,
-                scaleY: 1 - 0.025 * respiro + salto * 0.06,
-                alignment: Alignment.bottomCenter,
-                child: CustomPaint(
-                  size: Size.square(widget.tam),
-                  painter: _PintorRubi(
-                    expresion: widget.expresion,
-                    ojosCerrados: widget.expresion == ExpresionRubi.dormida ? 1 : _parpadeo.value,
-                    brillo: respiro,
+    // Capa propia: su animación no obliga a repintar la pantalla de alrededor.
+    return RepaintBoundary(
+      child: Semantics(
+        button: widget.alTocar != null,
+        label: widget.etiqueta,
+        child: GestureDetector(
+          key: const Key('rubi'),
+          onTap: widget.alTocar == null ? null : _tocar,
+          child: AnimatedBuilder(
+            animation: Listenable.merge([_respira, _parpadeo, _salto]),
+            builder: (_, _) {
+              final respiro = Curves.easeInOut.transform(_respira.value);
+              final salto = _salto.value.clamp(-1.0, 1.0);
+              return Transform.translate(
+                offset: Offset(0, salto * widget.tam * 0.18),
+                child: Transform.scale(
+                  scaleX: 1 + 0.015 * respiro - salto * 0.04,
+                  scaleY: 1 - 0.025 * respiro + salto * 0.06,
+                  alignment: Alignment.bottomCenter,
+                  child: CustomPaint(
+                    size: Size.square(widget.tam),
+                    painter: _PintorRubi(
+                      expresion: widget.expresion,
+                      ojosCerrados: widget.expresion == ExpresionRubi.dormida ? 1 : _parpadeo.value,
+                      brillo: respiro,
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -176,7 +184,13 @@ class _PintorRubi extends CustomPainter {
       final desfase = fila.isOdd ? r : 0.0;
       for (var x = w * 0.12 + desfase; x < w * 0.92; x += r * 2) {
         canvas.drawCircle(Offset(x, y), r * 0.92, Paint()..color = Paleta.frambuesa.withValues(alpha: 0.10));
-        canvas.drawCircle(Offset(x + r * 0.15, y + r * 0.2), r * 0.85, drupa..style = PaintingStyle.stroke..strokeWidth = 1);
+        canvas.drawCircle(
+          Offset(x + r * 0.15, y + r * 0.2),
+          r * 0.85,
+          drupa
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1,
+        );
         canvas.drawCircle(Offset(x - r * 0.3, y - r * 0.3), r * 0.18, luz);
       }
     }
@@ -314,7 +328,7 @@ class GloboRubi extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: context.tonos.superficie,
       borderRadius: const BorderRadius.only(
         topLeft: Radius.circular(18),
         topRight: Radius.circular(18),
@@ -325,7 +339,7 @@ class GloboRubi extends StatelessWidget {
     ),
     child: Text(
       texto,
-      style: const TextStyle(color: Paleta.texto, fontWeight: FontWeight.w700, height: 1.3),
+      style: TextStyle(color: context.tonos.texto, fontWeight: FontWeight.w700, height: 1.3),
     ),
   );
 }
@@ -334,7 +348,11 @@ class GloboRubi extends StatelessWidget {
 String saludoRubi(String nombre, DateTime ahora) {
   final primero = nombre.trim().split(RegExp(r'\s+')).first;
   final h = ahora.hour;
-  final saludo = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+  final saludo = h < 12
+      ? 'Buenos días'
+      : h < 19
+      ? 'Buenas tardes'
+      : 'Buenas noches';
   final frases = ['¿Te consentimos hoy?', '¿Reservamos algo para ti?', 'Tus lugares favoritos te esperan.'];
   return '$saludo, $primero. ${frases[ahora.day % frases.length]}';
 }

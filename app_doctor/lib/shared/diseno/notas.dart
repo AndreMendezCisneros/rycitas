@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'paleta.dart';
+import 'tonos.dart';
 
 /// Ideas para las notas de una reserva, según el rubro: ayudan a escribir sin frenar la reserva.
 List<String> sugerenciasDeNotas(String rubro) => switch (rubro) {
@@ -41,9 +41,9 @@ class CampoNotas extends StatelessWidget {
         decoration: InputDecoration(
           labelText: etiqueta ?? '¿Algo que debamos saber? (opcional)',
           alignLabelWithHint: true,
-          prefixIcon: const Padding(
+          prefixIcon: Padding(
             padding: EdgeInsets.only(bottom: 28),
-            child: Icon(Icons.sticky_note_2_outlined, color: Paleta.frambuesa),
+            child: Icon(Icons.sticky_note_2_outlined, color: context.tonos.acento),
           ),
         ),
       ),
@@ -53,7 +53,7 @@ class CampoNotas extends StatelessWidget {
         children: [
           for (final s in sugerenciasDeNotas(rubro))
             ActionChip(
-              avatar: const Icon(Icons.add_rounded, size: 16, color: Paleta.frambuesa),
+              avatar: Icon(Icons.add_rounded, size: 16, color: context.tonos.acento),
               label: Text(s),
               onPressed: () => _agregar(s),
             ),
@@ -76,21 +76,21 @@ class NotaCita extends StatelessWidget {
     margin: EdgeInsets.only(top: compacta ? 6 : 10),
     padding: EdgeInsets.symmetric(horizontal: 12, vertical: compacta ? 6 : 10),
     decoration: BoxDecoration(
-      color: Paleta.rosaClaro,
+      color: context.tonos.rosaClaro,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: Paleta.rosa),
+      border: Border.all(color: context.tonos.rosa),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.sticky_note_2_rounded, size: 16, color: Paleta.frambuesa),
+        Icon(Icons.sticky_note_2_rounded, size: 16, color: context.tonos.acento),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             texto,
             maxLines: compacta ? 2 : null,
             overflow: compacta ? TextOverflow.ellipsis : null,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Paleta.texto, height: 1.35),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.tonos.texto, height: 1.35),
           ),
         ),
       ],

@@ -10,6 +10,7 @@ import '../../shared/diseno/paleta.dart';
 import '../../shared/diseno/vidrio.dart';
 import 'datos_cliente.dart';
 import 'mascota.dart';
+import '../../shared/diseno/tonos.dart';
 
 IconData _icono(String clave) => switch (clave) {
   'estrella' => Icons.star_rounded,
@@ -47,7 +48,7 @@ class TarjetaProgreso extends ConsumerWidget {
               AnilloProgreso(
                 valor: (nivel['progreso'] as num).toDouble(),
                 tam: 64,
-                centro: const Icon(Icons.workspace_premium_rounded, color: Paleta.frambuesa, size: 28),
+                centro: Icon(Icons.workspace_premium_rounded, color: context.tonos.acento, size: 28),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -59,7 +60,7 @@ class TarjetaProgreso extends ConsumerWidget {
                       siguiente == null
                           ? '¡Llegaste al nivel más alto!'
                           : 'Te faltan ${nivel['faltan']} visita${nivel['faltan'] == 1 ? '' : 's'} para $siguiente',
-                      style: textos.bodySmall?.copyWith(color: Paleta.textoSuave),
+                      style: textos.bodySmall?.copyWith(color: context.tonos.textoSuave),
                     ),
                     const SizedBox(height: 8),
                     Wrap(
@@ -76,14 +77,14 @@ class TarjetaProgreso extends ConsumerWidget {
                         _Pildora(
                           icono: Icons.auto_awesome_rounded,
                           texto: '${d['puntos']} puntos',
-                          color: Paleta.frambuesa,
+                          color: context.tonos.acento,
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: Paleta.textoSuave),
+              Icon(Icons.chevron_right_rounded, color: context.tonos.textoSuave),
             ],
           ),
         ),
@@ -136,7 +137,7 @@ class SeccionLogros extends ConsumerWidget {
             Expanded(child: Text('Tus logros', style: Theme.of(context).textTheme.titleMedium)),
             Text(
               '$hechos de ${logros.length}',
-              style: const TextStyle(color: Paleta.textoSuave, fontWeight: FontWeight.w700),
+              style: TextStyle(color: context.tonos.textoSuave, fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -164,10 +165,10 @@ class _Insignia extends StatelessWidget {
   Widget build(BuildContext context) {
     final hecho = logro['logrado'] == true;
     return Material(
-      color: Colors.white,
+      color: context.tonos.superficie,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: hecho ? Paleta.rosa : Paleta.borde),
+        side: BorderSide(color: hecho ? context.tonos.rosa : context.tonos.borde),
       ),
       child: InkWell(
         key: Key('logro-${logro['clave']}'),
@@ -184,7 +185,7 @@ class _Insignia extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: hecho ? Paleta.degradado : null,
-                  color: hecho ? null : const Color(0xFFF1ECEE),
+                  color: hecho ? null : context.tonos.borde,
                   boxShadow: hecho
                       ? [BoxShadow(color: Paleta.rojo.withValues(alpha: 0.35), blurRadius: 14, spreadRadius: 1)]
                       : null,
@@ -203,7 +204,7 @@ class _Insignia extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: hecho ? Paleta.texto : Paleta.textoSuave,
+                  color: hecho ? context.tonos.texto : context.tonos.textoSuave,
                 ),
               ),
             ],
@@ -232,7 +233,7 @@ class _Insignia extends StatelessWidget {
             Text(
               hecho ? '¡Lo lograste! 🎉' : logro['como'] as String,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Paleta.textoSuave),
+              style: TextStyle(color: context.tonos.textoSuave),
             ),
             const SizedBox(height: 16),
             ClipRRect(
@@ -240,8 +241,8 @@ class _Insignia extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progreso / meta,
                 minHeight: 10,
-                color: Paleta.frambuesa,
-                backgroundColor: Paleta.rosa,
+                color: context.tonos.acento,
+                backgroundColor: context.tonos.rosa,
               ),
             ),
             const SizedBox(height: 6),
@@ -283,7 +284,7 @@ class _ConfetiState extends State<_Confeti> with SingleTickerProviderStateMixin 
       vx: (r.nextDouble() - 0.5) * 0.6,
       vy: 0.6 + r.nextDouble() * 0.9,
       giro: r.nextDouble() * math.pi * 2,
-      color: [Paleta.frambuesa, Paleta.rojo, Paleta.coral, const Color(0xFFFFC94D), Paleta.rosa][i % 5],
+      color: const [Paleta.frambuesa, Paleta.rojo, Paleta.coral, Color(0xFFFFC94D), Color(0xFFFF9FC0)][i % 5],
       tam: 6.0 + r.nextDouble() * 6,
     );
   });

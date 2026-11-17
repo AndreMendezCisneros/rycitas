@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:denticita_doctor/core/api.dart';
+import 'package:denticita_doctor/core/apariencia.dart';
 import 'package:denticita_doctor/core/modo.dart';
 import 'package:denticita_doctor/features/cliente/inicio_cliente.dart';
 import 'package:denticita_doctor/main.dart';
@@ -108,19 +110,30 @@ Map<String, Respuesta? Function(dynamic)> _rutasCliente({List<Map<String, dynami
     enviados?.add(Map<String, dynamic>.from(cuerpo as Map));
     return (
       status: 201,
-      cuerpo: {
-        'token': 't1',
-        'inicio': '2026-11-10T11:00:00-05:00',
-        'tratamiento': 'Hydrafacial',
-        'cupon': _cupon,
-      },
+      cuerpo: {'token': 't1', 'inicio': '2026-11-10T11:00:00-05:00', 'tratamiento': 'Hydrafacial', 'cupon': _cupon},
     );
   },
   'GET /mis-citas': (_) => ok({'proximas': [], 'pasadas': []}),
   'GET /logros': (_) => ok({
     'logros': [
-      {'clave': 'primera', 'titulo': 'Primera cita', 'como': 'Completa tu primera visita.', 'progreso': 1, 'meta': 1, 'logrado': true, 'icono': 'estrella'},
-      {'clave': 'fiel', 'titulo': 'Cliente fiel', 'como': 'Completa 5 visitas.', 'progreso': 1, 'meta': 5, 'logrado': false, 'icono': 'corazon'},
+      {
+        'clave': 'primera',
+        'titulo': 'Primera cita',
+        'como': 'Completa tu primera visita.',
+        'progreso': 1,
+        'meta': 1,
+        'logrado': true,
+        'icono': 'estrella',
+      },
+      {
+        'clave': 'fiel',
+        'titulo': 'Cliente fiel',
+        'como': 'Completa 5 visitas.',
+        'progreso': 1,
+        'meta': 5,
+        'logrado': false,
+        'icono': 'corazon',
+      },
     ],
     'visitas': 1,
     'puntos': 25,
@@ -173,6 +186,7 @@ void main() {
   setUpAll(() async {
     zonas.initializeTimeZones();
     await initializeDateFormatting('es');
+    await cargarFuentesReales();
   });
 
   testWidgets('sin sesión pregunta el modo; «Quiero reservar» registra y muestra sus lugares', (t) async {
@@ -265,7 +279,11 @@ void main() {
     expect(find.byKey(const Key('tarjeta-sellos')), findsOneWidget);
     expect(find.byKey(const Key('seccion-logros')), findsOneWidget);
     expect(find.byKey(const Key('logro-primera')), findsOneWidget);
-    await t.scrollUntilVisible(find.byKey(const Key('codigo-referido')), 300, scrollable: find.byType(Scrollable).first);
+    await t.scrollUntilVisible(
+      find.byKey(const Key('codigo-referido')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('K7PQ2M'), findsOneWidget);
   });
 
@@ -290,5 +308,32 @@ void main() {
     await _abrir(t, red, AlmacenMemoria()..datos[claveRenovacion] = 'r1');
     expect(find.text('Quiero reservar'), findsNothing);
     expect(find.textContaining('Luis Rojas'), findsWidgets);
+  });
+
+  testWidgets('capturas del modo cliente', (t) async {
+    if (carpetaCapturas == null) return;
+    final tema = Platform.environment['TEMA'] ?? 'claro';
+    final red = RedFalsa(_rutasCliente());
+    await _abrir(t, red, _conSesionCliente()..datos[claveTema] = tema);
+    await capturar(t, 'cliente-inicio-$tema');
+    await t.tap(find.byKey(const Key('rubi')));
+    await t.pumpAndSettle();
+    await capturar(t, 'cliente-rubi-$tema');
+    await t.tapAt(const Offset(200, 40));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Mis citas'));
+    await t.pumpAndSettle();
+    await capturar(t, 'cliente-citas-$tema');
+    await t.tap(find.text('Beneficios'));
+    await t.pumpAndSettle();
+    await capturar(t, 'cliente-beneficios-$tema');
+    await t.tap(find.text('Perfil'));
+    await t.pumpAndSettle();
+    await capturar(t, 'cliente-perfil-$tema');
+    await t.tap(find.text('Inicio'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('negocio-glowclinic')));
+    await t.pumpAndSettle();
+    await capturar(t, 'cliente-negocio-$tema');
   });
 }

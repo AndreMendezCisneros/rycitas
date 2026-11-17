@@ -14,6 +14,7 @@ import '../../shared/modelos.dart';
 import '../citas/acciones_cita.dart';
 import '../citas/reserva_rapida.dart';
 import 'agenda_controlador.dart';
+import '../../shared/diseno/tonos.dart';
 
 class HoyPantalla extends ConsumerWidget {
   const HoyPantalla({super.key});
@@ -246,8 +247,8 @@ class _SeccionTurnoState extends State<_SeccionTurno> {
                         _Pastilla(
                           key: Key('turno-${t.nombre}-por-confirmar'),
                           texto: '${widget.porConfirmar} por confirmar',
-                          fondo: const Color(0xFFF59E0B).withValues(alpha: 0.18),
-                          color: const Color(0xFFB45309),
+                          fondo: context.tonos.ambarFondo,
+                          color: context.tonos.ambarTexto,
                         ),
                     ],
                   ),
@@ -364,15 +365,15 @@ class _Franja extends StatelessWidget {
     width: double.infinity,
     margin: const EdgeInsets.only(bottom: 12),
     padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(color: colorAviso, borderRadius: BorderRadius.circular(16)),
+    decoration: BoxDecoration(color: context.tonos.ambarFondo, borderRadius: BorderRadius.circular(16)),
     child: Row(
       children: [
-        Icon(icono, color: colorAvisoTexto, size: 20),
+        Icon(icono, color: context.tonos.ambarTexto, size: 20),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             texto,
-            style: const TextStyle(color: colorAvisoTexto, fontWeight: FontWeight.w600),
+            style: TextStyle(color: context.tonos.ambarTexto, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -454,15 +455,11 @@ class _FilaHueco extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final inicio = Fechas.enLima(hueco.inicio);
-    void reservar() => abrirReservaRapida(
-      context,
-      ref,
-      dia: DateTime(inicio.year, inicio.month, inicio.day),
-      hora: hueco.inicio,
-    );
+    void reservar() =>
+        abrirReservaRapida(context, ref, dia: DateTime(inicio.year, inicio.month, inicio.day), hora: hueco.inicio);
     return _Linea(
       hora: Fechas.hora(hueco.inicio),
-      color: Paleta.borde,
+      color: context.tonos.borde,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -474,21 +471,21 @@ class _FilaHueco extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              color: Paleta.rosaClaro,
-              border: Border.all(color: Paleta.rosa, width: 1.4),
+              color: context.tonos.rosaClaro,
+              border: Border.all(color: context.tonos.rosa, width: 1.4),
             ),
             child: Row(
               children: [
-                const Icon(Icons.more_time_rounded, size: 18, color: Paleta.frambuesa),
+                Icon(Icons.more_time_rounded, size: 18, color: context.tonos.acento),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Libre ${Fechas.hora(hueco.inicio)} a ${Fechas.hora(hueco.fin)}',
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Paleta.textoSuave, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: context.tonos.textoSuave, fontWeight: FontWeight.w600),
                   ),
                 ),
-                const Icon(Icons.add_circle_rounded, size: 20, color: Paleta.frambuesa),
+                Icon(Icons.add_circle_rounded, size: 20, color: context.tonos.acento),
               ],
             ),
           ),
@@ -517,7 +514,10 @@ class _Resumen extends StatelessWidget {
             valor: valor,
             estilo: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800, height: 1.1),
           ),
-          Text(etiqueta, style: TextStyle(color: Colors.white.withValues(alpha: 0.88), fontWeight: FontWeight.w600)),
+          Text(
+            etiqueta,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.88), fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
@@ -526,7 +526,9 @@ class _Resumen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: Paleta.degradado,
         borderRadius: BorderRadius.circular(26),
-        boxShadow: [BoxShadow(color: Paleta.frambuesa.withValues(alpha: 0.28), blurRadius: 22, offset: const Offset(0, 10))],
+        boxShadow: [
+          BoxShadow(color: context.tonos.acento.withValues(alpha: 0.28), blurRadius: 22, offset: const Offset(0, 10)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -598,7 +600,7 @@ class _TarjetaCita extends ConsumerWidget {
                 ? const BorderSide(color: colorExito, width: 2)
                 : cita.porAprobar
                 ? const BorderSide(color: Paleta.ambar, width: 1.4)
-                : const BorderSide(color: Paleta.borde),
+                : BorderSide(color: context.tonos.borde),
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
@@ -647,7 +649,7 @@ class _TarjetaCita extends ConsumerWidget {
                         if (cita.paciente.inasistencias > 0)
                           Text(
                             '${cita.paciente.inasistencias} inasistencia${cita.paciente.inasistencias == 1 ? '' : 's'}',
-                            style: textos.bodySmall?.copyWith(color: colorAvisoTexto, fontWeight: FontWeight.w600),
+                            style: textos.bodySmall?.copyWith(color: context.tonos.ambarTexto, fontWeight: FontWeight.w600),
                           ),
                         if (cita.notas.isNotEmpty) NotaCita(cita.notas, compacta: true),
                         const SizedBox(height: 8),
@@ -710,7 +712,7 @@ class _PanelConsulta extends ConsumerWidget {
         color: esquema.surfaceContainerLowest,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
-          BoxShadow(color: Paleta.frambuesa.withValues(alpha: 0.10), blurRadius: 28, offset: const Offset(0, -6)),
+          BoxShadow(color: context.tonos.acento.withValues(alpha: 0.10), blurRadius: 28, offset: const Offset(0, -6)),
         ],
       ),
       child: SafeArea(

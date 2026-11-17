@@ -2,7 +2,7 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'paleta.dart';
+import 'tonos.dart';
 
 const duracionCorta = Duration(milliseconds: 220);
 const duracionMedia = Duration(milliseconds: 300);
@@ -59,7 +59,11 @@ class _PestanasAnimadasState extends State<PestanasAnimadas> {
             key: ValueKey(i),
             activa: i == widget.indice,
             visible: i == widget.indice || i == _anterior,
-            desplazamiento: i == widget.indice ? 0 : (i < widget.indice) == haciaLaDerecha ? -0.06 : 0.06,
+            desplazamiento: i == widget.indice
+                ? 0
+                : (i < widget.indice) == haciaLaDerecha
+                ? -0.06
+                : 0.06,
             duracion: sinAnimar ? Duration.zero : duracionMedia,
             // Terminó de salir: se oculta del todo (ni se pinta ni lo leen los lectores de pantalla).
             alTerminar: i == _anterior && i != widget.indice ? () => setState(() => _anterior = widget.indice) : null,
@@ -170,11 +174,11 @@ class TarjetaQueSeAbre extends StatelessWidget {
     transitionDuration: _sinAnimaciones(context) ? Duration.zero : const Duration(milliseconds: 380),
     closedElevation: 0,
     openElevation: 0,
-    closedColor: Colors.white,
-    middleColor: Paleta.superficie,
+    closedColor: context.tonos.superficie,
+    middleColor: context.tonos.superficieSuave,
     closedShape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(radio),
-      side: const BorderSide(color: Paleta.borde),
+      side: BorderSide(color: context.tonos.borde),
     ),
     closedBuilder: cerrada,
     openBuilder: (contexto, _) => abierta(contexto),

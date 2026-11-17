@@ -131,7 +131,10 @@ class _HorarioPantallaState extends ConsumerState<HorarioPantalla> {
                           if (delDia.isEmpty)
                             Padding(
                               padding: EdgeInsets.only(bottom: 8),
-                              child: Text('Cerrado', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                              child: Text(
+                                'Cerrado',
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                              ),
                             ),
                           for (final t in delDia)
                             Row(

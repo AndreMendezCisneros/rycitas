@@ -14,6 +14,7 @@ import '../../shared/modelos.dart';
 import '../citas/reserva_rapida.dart';
 import '../citas/acciones_cita.dart';
 import 'hoy_pantalla.dart' show FiltroProfesional;
+import '../../shared/diseno/tonos.dart';
 
 final semanaProvider = FutureProvider.autoDispose.family<List<DiaSemana>, String>((ref, desde) async {
   final extra = ref.watch(parametroProfesionalProvider);
@@ -55,7 +56,7 @@ class _SemanaPantallaState extends ConsumerState<SemanaPantalla> {
           citas: d.citas,
           porConfirmar: d.porConfirmar,
           bloqueo: d.bloqueo,
-          colores: List.filled(d.citas.clamp(0, 3), Paleta.frambuesa),
+          colores: List.filled(d.citas.clamp(0, 3), context.tonos.acento),
         ),
     };
     final desde = Fechas.fechaApi(_elegido);
@@ -96,9 +97,9 @@ class _SemanaPantallaState extends ConsumerState<SemanaPantalla> {
                         ),
                 ),
                 const SizedBox(height: 12),
-                const LeyendaCalendario(
+                LeyendaCalendario(
                   items: [
-                    (Paleta.frambuesa, 'Citas'),
+                    (context.tonos.acento, 'Citas'),
                     (Paleta.ambar, 'Por confirmar'),
                     (Paleta.gris, 'Bloqueado (tachado)'),
                   ],
@@ -130,10 +131,8 @@ class _SemanaPantallaState extends ConsumerState<SemanaPantalla> {
 }
 
 /// Hoja flotante de vidrio con lo que hay en un día: sus citas (con notas) y bloqueos, y «Reservar en este día».
-Future<void> mostrarHojaDia(BuildContext context, DateTime dia) => mostrarHojaVidrio<void>(
-  context,
-  builder: (_) => _HojaDia(dia: dia),
-);
+Future<void> mostrarHojaDia(BuildContext context, DateTime dia) =>
+    mostrarHojaVidrio<void>(context, builder: (_) => _HojaDia(dia: dia));
 
 class _HojaDia extends ConsumerWidget {
   const _HojaDia({required this.dia});
@@ -151,10 +150,7 @@ class _HojaDia extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            titulo[0].toUpperCase() + titulo.substring(1),
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text(titulo[0].toUpperCase() + titulo.substring(1), style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           Flexible(
             child: datos.when(
@@ -222,7 +218,9 @@ class _Dia extends ConsumerWidget {
                     '${t.nombre} ${t.citas}${t.porConfirmar > 0 ? ' (${t.porConfirmar} por confirmar)' : ''}',
                 ].join(' · '),
                 key: Key('turnos-${dia.fecha}'),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ),
           const SizedBox(height: 6),

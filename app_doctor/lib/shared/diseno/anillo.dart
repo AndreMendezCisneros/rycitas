@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'paleta.dart';
 import 'vidrio.dart';
+import 'tonos.dart';
 
 /// Anillo de progreso que se llena animado (nivel, tarjeta de sellos).
 class AnilloProgreso extends StatelessWidget {
@@ -21,7 +22,7 @@ class AnilloProgreso extends StatelessWidget {
     curve: Curves.easeOutCubic,
     builder: (_, v, hijo) => CustomPaint(
       size: Size.square(tam),
-      painter: _PintorAnillo(v, grosor),
+      painter: _PintorAnillo(v, grosor, context.tonos.rosa),
       child: SizedBox.square(
         dimension: tam,
         child: Center(child: hijo),
@@ -32,10 +33,11 @@ class AnilloProgreso extends StatelessWidget {
 }
 
 class _PintorAnillo extends CustomPainter {
-  _PintorAnillo(this.valor, this.grosor);
+  _PintorAnillo(this.valor, this.grosor, this.pista);
 
   final double valor;
   final double grosor;
+  final Color pista;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -47,7 +49,7 @@ class _PintorAnillo extends CustomPainter {
       math.pi * 2,
       false,
       Paint()
-        ..color = Paleta.rosa
+        ..color = pista
         ..style = PaintingStyle.stroke
         ..strokeWidth = grosor,
     );
@@ -58,8 +60,8 @@ class _PintorAnillo extends CustomPainter {
       math.pi * 2 * valor,
       false,
       Paint()
-        ..shader = const SweepGradient(
-          colors: [Paleta.frambuesa, Paleta.rojo, Paleta.coral, Paleta.frambuesa],
+        ..shader = SweepGradient(
+          colors: const [Paleta.frambuesa, Paleta.rojo, Paleta.coral, Paleta.frambuesa],
           transform: GradientRotation(-math.pi / 2),
         ).createShader(rect)
         ..style = PaintingStyle.stroke
@@ -69,5 +71,5 @@ class _PintorAnillo extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_PintorAnillo viejo) => viejo.valor != valor;
+  bool shouldRepaint(_PintorAnillo viejo) => viejo.valor != valor || viejo.pista != pista;
 }

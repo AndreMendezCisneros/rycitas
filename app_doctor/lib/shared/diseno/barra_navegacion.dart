@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'paleta.dart';
 import 'vidrio.dart';
+import 'tonos.dart';
 
 class DestinoBarra {
   const DestinoBarra({required this.icono, required this.iconoActivo, required this.texto, this.insignia = 0});
@@ -33,8 +34,6 @@ class BarraFlotante extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 4, 14, 10),
         child: Vidrio(
           radio: 30,
-          opacidad: 0.96,
-          desenfoque: 0, // sobre el fondo blanco no hay nada que desenfocar: se ahorra GPU
           padding: const EdgeInsets.all(6),
           child: Row(
             children: [
@@ -72,7 +71,10 @@ class _Item extends StatelessWidget {
       isLabelVisible: destino.insignia > 0,
       backgroundColor: Paleta.rojo,
       label: Text('${destino.insignia}'),
-      child: Icon(activo ? destino.iconoActivo : destino.icono, color: activo ? Colors.white : Paleta.textoSuave),
+      child: Icon(
+        activo ? destino.iconoActivo : destino.icono,
+        color: activo ? Colors.white : context.tonos.textoSuave,
+      ),
     );
     return Semantics(
       selected: activo,
@@ -95,7 +97,13 @@ class _Item extends StatelessWidget {
                   gradient: activo ? Paleta.degradado : null,
                   borderRadius: BorderRadius.circular(17),
                   boxShadow: activo
-                      ? [BoxShadow(color: Paleta.frambuesa.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 5))]
+                      ? [
+                          BoxShadow(
+                            color: context.tonos.acento.withValues(alpha: 0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 5),
+                          ),
+                        ]
                       : null,
                 ),
                 child: Center(child: icono),
@@ -107,7 +115,7 @@ class _Item extends StatelessWidget {
                   fontFamily: 'Jakarta',
                   fontSize: 11.5,
                   fontWeight: activo ? FontWeight.w800 : FontWeight.w600,
-                  color: activo ? Paleta.frambuesa : Paleta.textoSuave,
+                  color: activo ? context.tonos.acento : context.tonos.textoSuave,
                 ),
                 child: Text(destino.texto, maxLines: 1, overflow: TextOverflow.ellipsis),
               ),

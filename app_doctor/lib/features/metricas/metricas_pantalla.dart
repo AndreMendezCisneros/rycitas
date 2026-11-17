@@ -8,6 +8,7 @@ import '../../core/negocio.dart';
 import '../../shared/comunes.dart';
 import '../../shared/diseno/anillo.dart';
 import '../../shared/diseno/paleta.dart';
+import '../../shared/diseno/tonos.dart';
 
 class Indicadores {
   const Indicadores(this.d);
@@ -56,7 +57,7 @@ class _MetricasPantallaState extends ConsumerState<MetricasPantalla> {
     final clave = (_mes.year, _mes.month);
     final datos = ref.watch(metricasProvider(clave));
     final voc = ref.watch(vocProvider);
-    final titulo = DateFormat('MMMM yyyy', 'es').format(_mes);
+    final titulo = DateFormat('MMM yyyy', 'es').format(_mes).replaceAll('.', '');
     return Scaffold(
       appBar: AppBar(
         title: Text('Mi mes · ${titulo[0].toUpperCase()}${titulo.substring(1)}'),
@@ -88,7 +89,7 @@ class _MetricasPantallaState extends ConsumerState<MetricasPantalla> {
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withValues(alpha: 0.14),
+                      color: context.tonos.ambarFondo,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
@@ -298,9 +299,9 @@ class _Metas extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.tonos.superficie,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Paleta.borde),
+        border: Border.all(color: context.tonos.borde),
         boxShadow: Paleta.sombra(0.6),
       ),
       child: Column(
@@ -372,14 +373,14 @@ class _Meta extends StatelessWidget {
           tam: 76,
           centro: Text(
             centro,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Paleta.texto),
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: context.tonos.texto),
           ),
         ),
         const SizedBox(height: 6),
         Text(
           texto,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 12, color: Paleta.textoSuave, fontWeight: FontWeight.w600),
+          style: TextStyle(fontSize: 12, color: context.tonos.textoSuave, fontWeight: FontWeight.w600),
         ),
       ],
     ),

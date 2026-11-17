@@ -18,7 +18,13 @@ class _AvisosPantallaState extends ConsumerState<AvisosPantalla> {
   Object? _error;
   bool _guardando = false;
 
-  static const _minutos = {0: 'No avisar', 10: '10 min antes', 15: '15 min antes', 30: '30 min antes', 60: '1 hora antes'};
+  static const _minutos = {
+    0: 'No avisar',
+    10: '10 min antes',
+    15: '15 min antes',
+    30: '30 min antes',
+    60: '1 hora antes',
+  };
 
   @override
   void initState() {
@@ -36,7 +42,9 @@ class _AvisosPantallaState extends ConsumerState<AvisosPantalla> {
     }
   }
 
-  List<Map<String, dynamic>> get _tipos => [for (final t in _datos!['tipos'] as List) (t as Map).cast<String, dynamic>()];
+  List<Map<String, dynamic>> get _tipos => [
+    for (final t in _datos!['tipos'] as List) (t as Map).cast<String, dynamic>(),
+  ];
 
   Future<void> _guardar({String? tipo, bool? activo, int? minutos}) async {
     final apagados = [
@@ -45,10 +53,7 @@ class _AvisosPantallaState extends ConsumerState<AvisosPantalla> {
     ];
     setState(() => _guardando = true);
     try {
-      final datos = await ref.read(apiProvider).put('/avisos', {
-        'apagados': apagados,
-        'recordar_cita_min': ?minutos,
-      });
+      final datos = await ref.read(apiProvider).put('/avisos', {'apagados': apagados, 'recordar_cita_min': ?minutos});
       if (mounted) setState(() => _datos = datos);
     } on ApiError catch (e) {
       if (mounted) avisar(context, e.mensaje);

@@ -15,6 +15,7 @@ import 'datos_cliente.dart';
 import 'gamificacion.dart';
 import 'mascota.dart';
 import 'widgets_cliente.dart';
+import '../../shared/diseno/tonos.dart';
 
 /// Ficha del lugar: cabecera con su foto, tarjeta de sellos, cupones y servicios para reservar. Si se llega desde el
 /// calendario con un día ya elegido ([fecha]), ese día viaja hasta la elección de la hora.
@@ -40,7 +41,7 @@ class NegocioClientePantalla extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final datos = ref.watch(negocioClienteProvider(slug));
     return Scaffold(
-      backgroundColor: Paleta.fondo,
+      backgroundColor: context.tonos.fondo,
       body: datos.when(
         loading: () => const SafeArea(child: Cargando()),
         error: (e, _) => SafeArea(
@@ -194,15 +195,15 @@ class _AvisoDia extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-    decoration: BoxDecoration(color: Paleta.rosa, borderRadius: BorderRadius.circular(16)),
+    decoration: BoxDecoration(color: context.tonos.rosa, borderRadius: BorderRadius.circular(16)),
     child: Row(
       children: [
-        const Icon(Icons.event_available_rounded, color: Paleta.frambuesa),
+        Icon(Icons.event_available_rounded, color: context.tonos.acento),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             'Reservando para el ${Fechas.diaCorto(fecha)}. Elige el servicio.',
-            style: const TextStyle(color: Paleta.frambuesaOscura, fontWeight: FontWeight.w700),
+            style: TextStyle(color: context.tonos.acentoFuerte, fontWeight: FontWeight.w700),
           ),
         ),
       ],
@@ -222,10 +223,10 @@ class _TarjetaServicio extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: Colors.white,
+        color: context.tonos.superficie,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(22),
-          side: const BorderSide(color: Paleta.borde),
+          side: BorderSide(color: context.tonos.borde),
         ),
         child: InkWell(
           key: Key('servicio-${servicio['slug']}'),
@@ -238,8 +239,8 @@ class _TarjetaServicio extends StatelessWidget {
                 Container(
                   width: 46,
                   height: 46,
-                  decoration: BoxDecoration(color: Paleta.rosa, borderRadius: BorderRadius.circular(15)),
-                  child: const Icon(Icons.auto_awesome_rounded, color: Paleta.frambuesa),
+                  decoration: BoxDecoration(color: context.tonos.rosa, borderRadius: BorderRadius.circular(15)),
+                  child: Icon(Icons.auto_awesome_rounded, color: context.tonos.acento),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -255,18 +256,18 @@ class _TarjetaServicio extends StatelessWidget {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.schedule_rounded, size: 14, color: Paleta.textoSuave),
+                              Icon(Icons.schedule_rounded, size: 14, color: context.tonos.textoSuave),
                               const SizedBox(width: 3),
                               Text(
                                 '${servicio['duracion_min']} min',
-                                style: const TextStyle(color: Paleta.textoSuave, fontSize: 13),
+                                style: TextStyle(color: context.tonos.textoSuave, fontSize: 13),
                               ),
                             ],
                           ),
                           if (precio != null)
                             Text(
                               'desde S/ $precio',
-                              style: const TextStyle(color: Paleta.frambuesa, fontSize: 13, fontWeight: FontWeight.w800),
+                              style: TextStyle(color: context.tonos.acento, fontSize: 13, fontWeight: FontWeight.w800),
                             ),
                         ],
                       ),
@@ -531,7 +532,7 @@ class _ReservarClienteState extends ConsumerState<ReservarClientePantalla> {
         const SizedBox(height: 12),
         Text(
           '${n['nombre']} confirmará tu reserva y te avisaremos aquí.',
-          style: const TextStyle(color: Paleta.textoSuave),
+          style: TextStyle(color: context.tonos.textoSuave),
         ),
         const SizedBox(height: 12),
         FilledButton(
@@ -563,7 +564,7 @@ class _Pasos extends StatelessWidget {
             height: 5,
             decoration: BoxDecoration(
               gradient: i <= actual ? Paleta.degradado : null,
-              color: i <= actual ? null : Paleta.rosa,
+              color: i <= actual ? null : context.tonos.rosa,
               borderRadius: BorderRadius.circular(3),
             ),
           ),
@@ -617,22 +618,22 @@ class _ReservaHechaState extends State<_ReservaHecha> {
                   Text(
                     Fechas.diaHora(reserva['inicio'] as String),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Paleta.frambuesa, fontWeight: FontWeight.w800, fontSize: 16),
+                    style: TextStyle(color: context.tonos.acento, fontWeight: FontWeight.w800, fontSize: 16),
                   ),
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: Paleta.ambarFondo, borderRadius: BorderRadius.circular(20)),
-                    child: const Text(
+                    decoration: BoxDecoration(color: context.tonos.ambarFondo, borderRadius: BorderRadius.circular(20)),
+                    child: Text(
                       'Por confirmar',
-                      style: TextStyle(color: Paleta.ambarTexto, fontWeight: FontWeight.w800),
+                      style: TextStyle(color: context.tonos.ambarTexto, fontWeight: FontWeight.w800),
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     '${widget.negocio['nombre']} la confirmará y te llegará un aviso.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Paleta.textoSuave),
+                    style: TextStyle(color: context.tonos.textoSuave),
                   ),
                   if (cupon != null) ...[
                     const SizedBox(height: 8),

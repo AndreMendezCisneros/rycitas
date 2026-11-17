@@ -7,6 +7,7 @@ import '../../core/api.dart';
 import '../../shared/comunes.dart';
 import '../auth/bloqueo.dart';
 import '../auth/sesion.dart';
+import '../../core/apariencia.dart';
 
 class AjustesPantalla extends ConsumerWidget {
   const AjustesPantalla({super.key});
@@ -125,6 +126,8 @@ class AjustesPantalla extends ConsumerWidget {
               ],
             ],
           ),
+          const TituloGrupo('Apariencia'),
+          const _Grupo(children: [SelectorTema()]),
           const TituloGrupo('Seguridad'),
           _Grupo(
             children: [
@@ -209,10 +212,7 @@ class _Grupo extends StatelessWidget {
     clipBehavior: Clip.antiAlias,
     child: Column(
       children: [
-        for (var i = 0; i < children.length; i++) ...[
-          if (i > 0) const Divider(indent: 68),
-          children[i],
-        ],
+        for (var i = 0; i < children.length; i++) ...[if (i > 0) const Divider(indent: 68), children[i]],
       ],
     ),
   );

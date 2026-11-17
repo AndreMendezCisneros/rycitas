@@ -51,7 +51,12 @@ const claveRenovacion = 'token_renovacion';
 /// varias llamadas fallen a la vez: el token de renovación es de un solo uso y reusarlo cierra la sesión.
 class ApiCliente {
   /// [base] y [claveToken]: la app del cliente usa /cliente/v1 y guarda su sesión aparte de la del negocio.
-  ApiCliente(this._almacen, HttpClientAdapter? adaptador, {String base = '/api/v1', this.claveToken = claveRenovacion}) {
+  ApiCliente(
+    this._almacen,
+    HttpClientAdapter? adaptador, {
+    String base = '/api/v1',
+    this.claveToken = claveRenovacion,
+  }) {
     final opciones = BaseOptions(
       baseUrl: '$apiUrl$base',
       connectTimeout: const Duration(seconds: 10),

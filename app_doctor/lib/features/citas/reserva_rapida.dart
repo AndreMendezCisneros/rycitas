@@ -17,6 +17,7 @@ import '../agenda/agenda_controlador.dart';
 import '../configuracion/tratamientos_pantalla.dart';
 import '../pacientes/pacientes_pantalla.dart';
 import 'selector_hora.dart';
+import '../../shared/diseno/tonos.dart';
 
 /// Reserva rápida: todo en una hoja flotante, sin cambiar de pantalla. Cliente (buscado o nuevo), servicio y la
 /// hora libre más próxima ya elegida: en el caso común son 3 toques y «Reservar».
@@ -217,7 +218,7 @@ class _ReservaRapidaState extends ConsumerState<ReservaRapida> {
                 if (_tratamiento == null)
                   Text(
                     'Elige primero el ${voc.servicio}.',
-                    style: textos.bodyMedium?.copyWith(color: Paleta.textoSuave),
+                    style: textos.bodyMedium?.copyWith(color: context.tonos.textoSuave),
                   )
                 else
                   _pasoHora(),
@@ -339,7 +340,7 @@ class _ReservaRapidaState extends ConsumerState<ReservaRapida> {
                     label: Text(p.nombre),
                     onPressed: () => _elegirPaciente(p),
                   ),
-                if (lista.isEmpty) Text('Nadie con «$_consulta».', style: const TextStyle(color: Paleta.textoSuave)),
+                if (lista.isEmpty) Text('Nadie con «$_consulta».', style: TextStyle(color: context.tonos.textoSuave)),
               ],
             ),
           ),
@@ -433,7 +434,7 @@ class _ReservaRapidaState extends ConsumerState<ReservaRapida> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
                   'Ese día no tiene horas libres; te mostramos el más cercano.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Paleta.ambarTexto),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: context.tonos.ambarTexto),
                 ),
               ),
             SizedBox(
@@ -455,7 +456,7 @@ class _ReservaRapidaState extends ConsumerState<ReservaRapida> {
             ),
             const SizedBox(height: 10),
             for (final MapEntry(key: nombre, value: horas) in grupos.entries) ...[
-              Text(nombre, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Paleta.textoSuave)),
+              Text(nombre, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: context.tonos.textoSuave)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 8,
@@ -508,14 +509,14 @@ class _Paso extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: listo ? Paleta.degradado : null,
-            color: listo ? null : Paleta.rosa,
+            color: listo ? null : context.tonos.rosa,
           ),
           child: Center(
             child: listo
                 ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
                 : Text(
                     '$numero',
-                    style: const TextStyle(fontWeight: FontWeight.w800, color: Paleta.frambuesa, fontSize: 13),
+                    style: TextStyle(fontWeight: FontWeight.w800, color: context.tonos.acento, fontSize: 13),
                   ),
           ),
         ),

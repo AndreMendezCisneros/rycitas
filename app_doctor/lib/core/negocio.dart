@@ -70,7 +70,10 @@ class TurnoNegocio {
   Map<String, dynamic> toJson() => {'nombre': nombre, 'hasta': hasta};
 }
 
-const turnosPorDefecto = [TurnoNegocio(nombre: 'Mañana', hasta: '13:00'), TurnoNegocio(nombre: 'Tarde', hasta: '24:00')];
+const turnosPorDefecto = [
+  TurnoNegocio(nombre: 'Mañana', hasta: '13:00'),
+  TurnoNegocio(nombre: 'Tarde', hasta: '24:00'),
+];
 
 class Negocio {
   const Negocio({

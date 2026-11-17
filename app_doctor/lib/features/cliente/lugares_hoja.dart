@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/fechas.dart';
-import '../../shared/diseno/paleta.dart';
 import '../../shared/diseno/vidrio.dart';
 import 'datos_cliente.dart';
 import 'widgets_cliente.dart';
+import '../../shared/diseno/tonos.dart';
 
 /// Hoja flotante con los lugares donde se puede reservar: primero los suyos, luego «Descubre» (filtrable por rubro).
 /// La abren Rubí y el calendario de «Mis citas» (con [dia], que pasa a la reserva como día preferido).
@@ -54,7 +54,7 @@ class _LugaresState extends ConsumerState<_Lugares> {
             padding: const EdgeInsets.only(bottom: 8),
             child: Text(
               'Para el ${Fechas.diaLargo(Fechas.fechaApi(widget.dia!))}',
-              style: textos.bodyMedium?.copyWith(color: Paleta.textoSuave),
+              style: textos.bodyMedium?.copyWith(color: context.tonos.textoSuave),
             ),
           ),
         if (lista(mios.value?['negocios']).isNotEmpty) ...[
@@ -72,7 +72,11 @@ class _LugaresState extends ConsumerState<_Lugares> {
             children: [
               Padding(
                 padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(label: const Text('Todos'), selected: _rubro.isEmpty, onSelected: (_) => setState(() => _rubro = '')),
+                child: ChoiceChip(
+                  label: const Text('Todos'),
+                  selected: _rubro.isEmpty,
+                  onSelected: (_) => setState(() => _rubro = ''),
+                ),
               ),
               for (final r in rubros)
                 Padding(
@@ -90,9 +94,9 @@ class _LugaresState extends ConsumerState<_Lugares> {
         if (descubre.isLoading) const Padding(padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
         for (final n in otros) _FilaLugar(negocio: n, alReservar: () => _reservar(n)),
         if (!descubre.isLoading && otros.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text('No hay más lugares por ahora.', style: TextStyle(color: Paleta.textoSuave)),
+            child: Text('No hay más lugares por ahora.', style: TextStyle(color: context.tonos.textoSuave)),
           ),
       ],
     );
@@ -119,7 +123,7 @@ class _FilaLugar extends StatelessWidget {
               Text(negocio['nombre'] as String, style: const TextStyle(fontWeight: FontWeight.w700)),
               Text(
                 negocio['rubro_nombre'] as String? ?? '',
-                style: const TextStyle(color: Paleta.textoSuave, fontSize: 12.5),
+                style: TextStyle(color: context.tonos.textoSuave, fontSize: 12.5),
               ),
             ],
           ),
@@ -129,8 +133,8 @@ class _FilaLugar extends StatelessWidget {
           style: FilledButton.styleFrom(
             minimumSize: const Size(0, 40),
             padding: const EdgeInsets.symmetric(horizontal: 14),
-            backgroundColor: Paleta.rosa,
-            foregroundColor: Paleta.frambuesa,
+            backgroundColor: context.tonos.rosa,
+            foregroundColor: context.tonos.acento,
           ),
           onPressed: negocio['acepta_reservas'] == false ? null : alReservar,
           child: const Text('Reservar'),

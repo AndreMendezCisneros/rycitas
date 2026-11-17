@@ -7,22 +7,20 @@ part of 'modelos.dart';
 // **************************************************************************
 
 _TratamientoRef _$TratamientoRefFromJson(Map<String, dynamic> json) =>
-    _TratamientoRef(
-      id: (json['id'] as num).toInt(),
-      nombre: json['nombre'] as String,
-    );
+    _TratamientoRef(id: (json['id'] as num).toInt(), nombre: json['nombre'] as String);
 
-Map<String, dynamic> _$TratamientoRefToJson(_TratamientoRef instance) =>
-    <String, dynamic>{'id': instance.id, 'nombre': instance.nombre};
+Map<String, dynamic> _$TratamientoRefToJson(_TratamientoRef instance) => <String, dynamic>{
+  'id': instance.id,
+  'nombre': instance.nombre,
+};
 
 _ProfesionalRef _$ProfesionalRefFromJson(Map<String, dynamic> json) =>
-    _ProfesionalRef(
-      id: (json['id'] as num).toInt(),
-      nombre: json['nombre'] as String,
-    );
+    _ProfesionalRef(id: (json['id'] as num).toInt(), nombre: json['nombre'] as String);
 
-Map<String, dynamic> _$ProfesionalRefToJson(_ProfesionalRef instance) =>
-    <String, dynamic>{'id': instance.id, 'nombre': instance.nombre};
+Map<String, dynamic> _$ProfesionalRefToJson(_ProfesionalRef instance) => <String, dynamic>{
+  'id': instance.id,
+  'nombre': instance.nombre,
+};
 
 _CuponCita _$CuponCitaFromJson(Map<String, dynamic> json) => _CuponCita(
   codigo: json['codigo'] as String,
@@ -30,12 +28,11 @@ _CuponCita _$CuponCitaFromJson(Map<String, dynamic> json) => _CuponCita(
   descuento: json['descuento'] as String? ?? '',
 );
 
-Map<String, dynamic> _$CuponCitaToJson(_CuponCita instance) =>
-    <String, dynamic>{
-      'codigo': instance.codigo,
-      'titulo': instance.titulo,
-      'descuento': instance.descuento,
-    };
+Map<String, dynamic> _$CuponCitaToJson(_CuponCita instance) => <String, dynamic>{
+  'codigo': instance.codigo,
+  'titulo': instance.titulo,
+  'descuento': instance.descuento,
+};
 
 _PacienteRef _$PacienteRefFromJson(Map<String, dynamic> json) => _PacienteRef(
   id: (json['id'] as num).toInt(),
@@ -44,13 +41,12 @@ _PacienteRef _$PacienteRefFromJson(Map<String, dynamic> json) => _PacienteRef(
   inasistencias: (json['inasistencias'] as num?)?.toInt() ?? 0,
 );
 
-Map<String, dynamic> _$PacienteRefToJson(_PacienteRef instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'nombre': instance.nombre,
-      'celular': instance.celular,
-      'inasistencias': instance.inasistencias,
-    };
+Map<String, dynamic> _$PacienteRefToJson(_PacienteRef instance) => <String, dynamic>{
+  'id': instance.id,
+  'nombre': instance.nombre,
+  'celular': instance.celular,
+  'inasistencias': instance.inasistencias,
+};
 
 _Cita _$CitaFromJson(Map<String, dynamic> json) => _Cita(
   id: (json['id'] as num).toInt(),
@@ -76,13 +72,9 @@ _Cita _$CitaFromJson(Map<String, dynamic> json) => _Cita(
   precioAcordado: (json['precio_acordado'] as num?)?.toInt(),
   precioTexto: json['precio_texto'] as String?,
   whatsappUrl: json['whatsapp_url'] as String?,
-  tratamiento: TratamientoRef.fromJson(
-    json['tratamiento'] as Map<String, dynamic>,
-  ),
+  tratamiento: TratamientoRef.fromJson(json['tratamiento'] as Map<String, dynamic>),
   paciente: PacienteRef.fromJson(json['paciente'] as Map<String, dynamic>),
-  cupon: json['cupon'] == null
-      ? null
-      : CuponCita.fromJson(json['cupon'] as Map<String, dynamic>),
+  cupon: json['cupon'] == null ? null : CuponCita.fromJson(json['cupon'] as Map<String, dynamic>),
   notas: json['notas'] as String? ?? '',
 );
 
@@ -142,21 +134,11 @@ _Agenda _$AgendaFromJson(Map<String, dynamic> json) => _Agenda(
   fecha: json['fecha'] as String,
   retrasoMin: (json['retraso_min'] as num?)?.toInt() ?? 0,
   porAprobar: (json['por_aprobar'] as num?)?.toInt() ?? 0,
-  citas:
-      (json['citas'] as List<dynamic>?)
-          ?.map((e) => Cita.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-      const [],
+  citas: (json['citas'] as List<dynamic>?)?.map((e) => Cita.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
   huecos:
-      (json['huecos'] as List<dynamic>?)
-          ?.map((e) => Hueco.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-      const [],
+      (json['huecos'] as List<dynamic>?)?.map((e) => Hueco.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
   turnos:
-      (json['turnos'] as List<dynamic>?)
-          ?.map((e) => Turno.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-      const [],
+      (json['turnos'] as List<dynamic>?)?.map((e) => Turno.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
   generadoEn: json['generado_en'] as String?,
 );
 
@@ -186,30 +168,20 @@ Map<String, dynamic> _$BloqueoToJson(_Bloqueo instance) => <String, dynamic>{
 
 _DiaSemana _$DiaSemanaFromJson(Map<String, dynamic> json) => _DiaSemana(
   fecha: json['fecha'] as String,
-  citas:
-      (json['citas'] as List<dynamic>?)
-          ?.map((e) => Cita.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-      const [],
+  citas: (json['citas'] as List<dynamic>?)?.map((e) => Cita.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
   bloqueos:
-      (json['bloqueos'] as List<dynamic>?)
-          ?.map((e) => Bloqueo.fromJson(e as Map<String, dynamic>))
-          .toList() ??
+      (json['bloqueos'] as List<dynamic>?)?.map((e) => Bloqueo.fromJson(e as Map<String, dynamic>)).toList() ??
       const [],
   turnos:
-      (json['turnos'] as List<dynamic>?)
-          ?.map((e) => Turno.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-      const [],
+      (json['turnos'] as List<dynamic>?)?.map((e) => Turno.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
 );
 
-Map<String, dynamic> _$DiaSemanaToJson(_DiaSemana instance) =>
-    <String, dynamic>{
-      'fecha': instance.fecha,
-      'citas': instance.citas.map((e) => e.toJson()).toList(),
-      'bloqueos': instance.bloqueos.map((e) => e.toJson()).toList(),
-      'turnos': instance.turnos.map((e) => e.toJson()).toList(),
-    };
+Map<String, dynamic> _$DiaSemanaToJson(_DiaSemana instance) => <String, dynamic>{
+  'fecha': instance.fecha,
+  'citas': instance.citas.map((e) => e.toJson()).toList(),
+  'bloqueos': instance.bloqueos.map((e) => e.toJson()).toList(),
+  'turnos': instance.turnos.map((e) => e.toJson()).toList(),
+};
 
 _DiaMes _$DiaMesFromJson(Map<String, dynamic> json) => _DiaMes(
   fecha: json['fecha'] as String,
@@ -232,18 +204,15 @@ _Siguiente _$SiguienteFromJson(Map<String, dynamic> json) => _Siguiente(
   whatsappUrl: json['whatsapp_url'] as String,
 );
 
-Map<String, dynamic> _$SiguienteToJson(_Siguiente instance) =>
-    <String, dynamic>{
-      'cita_id': instance.citaId,
-      'paciente': instance.paciente,
-      'inicio': instance.inicio,
-      'whatsapp_url': instance.whatsappUrl,
-    };
+Map<String, dynamic> _$SiguienteToJson(_Siguiente instance) => <String, dynamic>{
+  'cita_id': instance.citaId,
+  'paciente': instance.paciente,
+  'inicio': instance.inicio,
+  'whatsapp_url': instance.whatsappUrl,
+};
 
-_DiaLibre _$DiaLibreFromJson(Map<String, dynamic> json) => _DiaLibre(
-  fecha: json['fecha'] as String,
-  horas: (json['horas'] as List<dynamic>).map((e) => e as String).toList(),
-);
+_DiaLibre _$DiaLibreFromJson(Map<String, dynamic> json) =>
+    _DiaLibre(fecha: json['fecha'] as String, horas: (json['horas'] as List<dynamic>).map((e) => e as String).toList());
 
 Map<String, dynamic> _$DiaLibreToJson(_DiaLibre instance) => <String, dynamic>{
   'fecha': instance.fecha,
@@ -278,22 +247,21 @@ _Tratamiento _$TratamientoFromJson(Map<String, dynamic> json) => _Tratamiento(
   duracionRealCitas: (json['duracion_real_citas'] as num?)?.toInt() ?? 0,
 );
 
-Map<String, dynamic> _$TratamientoToJson(_Tratamiento instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'nombre': instance.nombre,
-      'motivo_paciente': instance.motivoPaciente,
-      'descripcion': instance.descripcion,
-      'indicaciones': instance.indicaciones,
-      'duracion_min': instance.duracionMin,
-      'margen_min': instance.margenMin,
-      'precio_desde': instance.precioDesde,
-      'reservable': instance.reservable,
-      'visible': instance.visible,
-      'orden': instance.orden,
-      'duracion_real_min': instance.duracionRealMin,
-      'duracion_real_citas': instance.duracionRealCitas,
-    };
+Map<String, dynamic> _$TratamientoToJson(_Tratamiento instance) => <String, dynamic>{
+  'id': instance.id,
+  'nombre': instance.nombre,
+  'motivo_paciente': instance.motivoPaciente,
+  'descripcion': instance.descripcion,
+  'indicaciones': instance.indicaciones,
+  'duracion_min': instance.duracionMin,
+  'margen_min': instance.margenMin,
+  'precio_desde': instance.precioDesde,
+  'reservable': instance.reservable,
+  'visible': instance.visible,
+  'orden': instance.orden,
+  'duracion_real_min': instance.duracionRealMin,
+  'duracion_real_citas': instance.duracionRealCitas,
+};
 
 _Paciente _$PacienteFromJson(Map<String, dynamic> json) => _Paciente(
   id: (json['id'] as num).toInt(),
@@ -302,11 +270,7 @@ _Paciente _$PacienteFromJson(Map<String, dynamic> json) => _Paciente(
   inasistencias: (json['inasistencias'] as num?)?.toInt() ?? 0,
   bloqueado: json['bloqueado'] as bool? ?? false,
   verificado: json['verificado'] as bool? ?? false,
-  citas:
-      (json['citas'] as List<dynamic>?)
-          ?.map((e) => Cita.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-      const [],
+  citas: (json['citas'] as List<dynamic>?)?.map((e) => Cita.fromJson(e as Map<String, dynamic>)).toList() ?? const [],
 );
 
 Map<String, dynamic> _$PacienteToJson(_Paciente instance) => <String, dynamic>{
