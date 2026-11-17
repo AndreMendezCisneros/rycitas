@@ -130,6 +130,10 @@ class _RegistroClienteState extends ConsumerState<RegistroClientePantalla> {
   final _celular = TextEditingController();
   final _referido = TextEditingController();
   final _codigo = TextEditingController();
+  final _clave = TextEditingController();
+  // Quien llega por primera vez crea su cuenta; quien ya la tiene, entra con correo y contraseña.
+  bool _creando = true;
+  bool _claveOculta = true;
   bool _acepta = false;
   bool _publicidad = false;
   bool _conInvitacion = false;
@@ -139,41 +143,65 @@ class _RegistroClienteState extends ConsumerState<RegistroClientePantalla> {
 
   @override
   void dispose() {
-    for (final c in [_nombre, _correo, _celular, _referido, _codigo]) {
+    for (final c in [_nombre, _correo, _celular, _referido, _codigo, _clave]) {
       c.dispose();
     }
     super.dispose();
   }
 
+  void _cambiarModo(bool creando, [String? aviso]) => setState(() {
+    _creando = creando;
+    _faltaCodigo = false;
+    _error = aviso;
+  });
+
   Future<void> _entrar() async {
-    if (_nombre.text.trim().length < 2 || !_correo.text.contains('@') || _celular.text.trim().length < 9) {
-      setState(() => _error = 'Completa tu nombre, tu correo y tu WhatsApp.');
-      return;
-    }
-    if (!_acepta) {
-      setState(() => _error = 'Acepta la política de datos para continuar.');
-      return;
+    final sesion = ref.read(sesionClienteProvider.notifier);
+    if (!_creando) {
+      if (!_correo.text.contains('@') || _clave.text.isEmpty) {
+        setState(() => _error = 'Escribe tu correo y tu contraseña.');
+        return;
+      }
+    } else if (!_faltaCodigo) {
+      if (_nombre.text.trim().length < 2 || !_correo.text.contains('@') || _celular.text.trim().length < 9) {
+        setState(() => _error = 'Completa tu nombre, tu correo y tu WhatsApp.');
+        return;
+      }
+      if (_clave.text.length < 8) {
+        setState(() => _error = 'La contraseña debe tener al menos 8 caracteres.');
+        return;
+      }
+      if (!_acepta) {
+        setState(() => _error = 'Acepta la política de datos para continuar.');
+        return;
+      }
     }
     setState(() {
       _enviando = true;
       _error = null;
     });
-    final sesion = ref.read(sesionClienteProvider.notifier);
     try {
-      if (_faltaCodigo) {
+      if (!_creando) {
+        await sesion.entrar(correo: _correo.text, clave: _clave.text);
+      } else if (_faltaCodigo) {
         await sesion.verificar(correo: _correo.text, celular: _celular.text, codigo: _codigo.text);
       } else {
         final r = await sesion.registrar(
           nombre: _nombre.text,
           correo: _correo.text,
           celular: _celular.text,
+          clave: _clave.text,
           referido: _referido.text,
           aceptaPublicidad: _publicidad,
         );
         if (r == ResultadoRegistro.faltaCodigo && mounted) setState(() => _faltaCodigo = true);
       }
     } on ApiError catch (e) {
-      if (mounted) setState(() => _error = e.mensaje);
+      if (!mounted) return;
+      // Se equivocó de pestaña: se le lleva a la correcta con el aviso.
+      if (e.codigo == 'cuenta_existe') return _cambiarModo(false, e.mensaje);
+      if (e.codigo == 'sin_clave') return _cambiarModo(true, e.mensaje);
+      setState(() => _error = e.mensaje);
     } finally {
       if (mounted) setState(() => _enviando = false);
     }
@@ -192,33 +220,52 @@ class _RegistroClienteState extends ConsumerState<RegistroClientePantalla> {
             children: [
               const Center(child: Rubi(tam: 88, etiqueta: 'Rubí, la mascota de RyCitas')),
               const SizedBox(height: 16),
-              Text('Reserva con RyCitas', textAlign: TextAlign.center, style: textos.headlineSmall),
+              Text(
+                _creando ? 'Crea tu cuenta' : 'Qué bueno verte',
+                textAlign: TextAlign.center,
+                style: textos.headlineSmall,
+              ),
               const SizedBox(height: 6),
               Text(
-                'Usa el mismo WhatsApp con el que reservas: así aparecen solos los lugares donde ya te atendiste.',
+                _creando
+                    ? 'Usa el mismo WhatsApp con el que reservas: así aparecen solos los lugares donde ya te atendiste.'
+                    : 'Entra con tu correo y tu contraseña.',
                 textAlign: TextAlign.center,
                 style: textos.bodyMedium?.copyWith(color: esquema.onSurfaceVariant),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              SegmentedButton<bool>(
+                key: const Key('cliente-modo'),
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Ya tengo cuenta')),
+                  ButtonSegment(value: true, label: Text('Crear cuenta')),
+                ],
+                selected: {_creando},
+                onSelectionChanged: _enviando ? null : (v) => _cambiarModo(v.first),
+              ),
+              const SizedBox(height: 16),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      TextField(
-                        key: const Key('cliente-nombre'),
-                        controller: _nombre,
-                        enabled: !_faltaCodigo,
-                        textCapitalization: TextCapitalization.words,
-                        autofillHints: const [AutofillHints.name],
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Tu nombre',
-                          prefixIcon: Icon(Icons.person_outline),
+                      if (_creando) ...[
+                        TextField(
+                          key: const Key('cliente-nombre'),
+                          controller: _nombre,
+                          enabled: !_faltaCodigo,
+                          textCapitalization: TextCapitalization.words,
+                          autofillHints: const [AutofillHints.name],
+                          textInputAction: TextInputAction.next,
+                          decoration: const InputDecoration(
+                            labelText: 'Tu nombre',
+                            prefixIcon: Icon(Icons.person_outline),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
+                        const SizedBox(height: 12),
+                      ],
                       TextField(
                         key: const Key('cliente-correo'),
                         controller: _correo,
@@ -228,19 +275,41 @@ class _RegistroClienteState extends ConsumerState<RegistroClientePantalla> {
                         textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(labelText: 'Correo', prefixIcon: Icon(Icons.alternate_email)),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        key: const Key('cliente-celular'),
-                        controller: _celular,
-                        enabled: !_faltaCodigo,
-                        keyboardType: TextInputType.phone,
-                        autofillHints: const [AutofillHints.telephoneNumber],
-                        decoration: const InputDecoration(
-                          labelText: 'WhatsApp',
-                          hintText: '987 654 321',
-                          prefixIcon: Icon(Icons.chat_outlined),
+                      if (_creando) ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          key: const Key('cliente-celular'),
+                          controller: _celular,
+                          enabled: !_faltaCodigo,
+                          keyboardType: TextInputType.phone,
+                          autofillHints: const [AutofillHints.telephoneNumber],
+                          decoration: const InputDecoration(
+                            labelText: 'WhatsApp',
+                            hintText: '987 654 321',
+                            prefixIcon: Icon(Icons.chat_outlined),
+                          ),
                         ),
-                      ),
+                      ],
+                      if (!_faltaCodigo) ...[
+                        const SizedBox(height: 12),
+                        TextField(
+                          key: const Key('cliente-clave'),
+                          controller: _clave,
+                          obscureText: _claveOculta,
+                          autofillHints: [_creando ? AutofillHints.newPassword : AutofillHints.password],
+                          onSubmitted: (_) => _entrar(),
+                          decoration: InputDecoration(
+                            labelText: 'Contraseña',
+                            helperText: _creando ? 'Mínimo 8 caracteres.' : null,
+                            prefixIcon: const Icon(Icons.lock_outline_rounded),
+                            suffixIcon: IconButton(
+                              tooltip: _claveOculta ? 'Mostrar contraseña' : 'Ocultar contraseña',
+                              onPressed: () => setState(() => _claveOculta = !_claveOculta),
+                              icon: Icon(_claveOculta ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                            ),
+                          ),
+                        ),
+                      ],
                       if (_faltaCodigo) ...[
                         const SizedBox(height: 12),
                         Text('Te enviamos un código de 6 dígitos a tu correo.', style: textos.bodySmall),
@@ -252,7 +321,7 @@ class _RegistroClienteState extends ConsumerState<RegistroClientePantalla> {
                           maxLength: 6,
                           decoration: const InputDecoration(labelText: 'Código', prefixIcon: Icon(Icons.pin_outlined)),
                         ),
-                      ] else ...[
+                      ] else if (_creando) ...[
                         if (_conInvitacion) ...[
                           const SizedBox(height: 12),
                           TextField(
@@ -312,7 +381,15 @@ class _RegistroClienteState extends ConsumerState<RegistroClientePantalla> {
                       FilledButton(
                         key: const Key('cliente-entrar'),
                         onPressed: _enviando ? null : _entrar,
-                        child: Text(_enviando ? 'Entrando…' : (_faltaCodigo ? 'Verificar' : 'Entrar')),
+                        child: Text(
+                          _enviando
+                              ? 'Un momento…'
+                              : _faltaCodigo
+                              ? 'Verificar'
+                              : _creando
+                              ? 'Crear cuenta'
+                              : 'Entrar',
+                        ),
                       ),
                     ],
                   ),

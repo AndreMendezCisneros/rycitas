@@ -51,6 +51,24 @@ def test_reserva_desde_la_app_con_notas_y_el_cliente_las_ve(consultorio, limpiez
     assert app.get("/mis-citas").json()["proximas"][0]["notas"] == "Piel sensible"
 
 
+def test_lo_reservado_desde_la_app_se_ve_aunque_el_whatsapp_no_este_probado(consultorio, limpieza, cliente):
+    reservar(cliente)  # una cita de ese número hecha en la web: esa todavía no se muestra
+    app = ApiCliente(_cuenta(verificado=False))
+    hora = app.get("/negocios/sonrisa/disponibilidad", motivo="limpieza").json()["dias"][0]["horas"][1]
+    r = app.post("/negocios/sonrisa/reservas", {"motivo": "limpieza", "inicio": hora})
+    assert r.status_code == 201, r.content
+    proximas = app.get("/mis-citas").json()["proximas"]
+    assert len(proximas) == 1 and proximas[0]["estado"] == "por_aprobar"
+
+
+def test_otra_cuenta_con_el_mismo_numero_no_ve_lo_que_reservo_la_primera(consultorio, limpieza):
+    app = ApiCliente(_cuenta(verificado=False))
+    hora = app.get("/negocios/sonrisa/disponibilidad", motivo="limpieza").json()["dias"][0]["horas"][0]
+    assert app.post("/negocios/sonrisa/reservas", {"motivo": "limpieza", "inicio": hora}).status_code == 201
+    intrusa = ApiCliente(_cuenta(correo="intrusa@correo.pe", verificado=False))
+    assert intrusa.get("/mis-citas").json()["proximas"] == []
+
+
 def test_el_negocio_agenda_con_notas_y_luego_las_edita(limpieza, api):
     r = api.post("/citas", {
         "tratamiento_id": limpieza.pk, "inicio": AHORA.replace(hour=11).isoformat(),
@@ -168,6 +186,36 @@ def test_el_push_de_citas_solo_llega_a_quien_probo_su_whatsapp(settings):
     mensaje = sesion.post.call_args.kwargs["json"]["message"]
     assert mensaje["token"] == "tok-1"
     assert mensaje["android"]["notification"]["channel_id"] == avisos.CANAL_CITAS
+
+
+def test_la_cuenta_que_reservo_recibe_sus_avisos_sin_whatsapp_probado(settings):
+    settings.FIREBASE_PROJECT_ID, settings.FIREBASE_CREDENCIALES = "p", "c"
+    reservo = _cuenta(verificado=False)
+    intrusa = _cuenta(correo="intrusa@correo.pe", verificado=False)
+    DispositivoCliente.objects.create(cliente=reservo, token_fcm="tok-1")
+    DispositivoCliente.objects.create(cliente=intrusa, token_fcm="tok-2")
+    sesion = mock.Mock()
+    sesion.post.return_value = mock.Mock(ok=True, status_code=200, text="")
+    with mock.patch("mensajeria.push._sesion_fcm", return_value=sesion):
+        enviados = avisos.enviar(
+            ["+51987654321"], "t", "c", {"tipo": "cita"}, None, True, avisos.CANAL_CITAS, reservo.pk
+        )
+    assert enviados == 1 and sesion.post.call_args.kwargs["json"]["message"]["token"] == "tok-1"
+
+
+def test_al_confirmar_el_aviso_lleva_la_cuenta_que_reservo(
+    consultorio, limpieza, api, tareas, django_capture_on_commit_callbacks
+):
+    cuenta = _cuenta(verificado=False)
+    app = ApiCliente(cuenta)
+    hora = app.get("/negocios/sonrisa/disponibilidad", motivo="limpieza").json()["dias"][0]["horas"][0]
+    cita_id = Cita.objects.get(token_gestion=app.post(
+        "/negocios/sonrisa/reservas", {"motivo": "limpieza", "inicio": hora}
+    ).json()["token"]).pk
+    with django_capture_on_commit_callbacks(execute=True):
+        assert api.post(f"/citas/{cita_id}/aprobar").status_code == 200
+    [llamada] = [c for c in tareas.call_args_list if c.args[0] == "clientes.avisos.enviar"]
+    assert llamada.args[8] == cuenta.pk
 
 
 # --- Logros ------------------------------------------------------------------------------------------------

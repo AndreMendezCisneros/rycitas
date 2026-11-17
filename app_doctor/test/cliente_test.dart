@@ -205,6 +205,7 @@ void main() {
     await t.enterText(find.byKey(const Key('cliente-nombre')), 'Rosa Paz');
     await t.enterText(find.byKey(const Key('cliente-correo')), 'rosa@correo.pe');
     await t.enterText(find.byKey(const Key('cliente-celular')), '987654321');
+    await t.enterText(find.byKey(const Key('cliente-clave')), 'secreta-123');
     await t.ensureVisible(find.byKey(const Key('cliente-entrar')));
     await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('cliente-entrar')));
@@ -227,6 +228,55 @@ void main() {
     expect(find.text('GlowClinic'), findsOneWidget);
     expect(find.text('2/5 sellos'), findsOneWidget);
     expect(find.text('1 cupón'), findsOneWidget);
+  });
+
+  testWidgets('«Ya tengo cuenta» entra con correo y contraseña', (t) async {
+    Object? cuerpo;
+    final red = RedFalsa({
+      ..._rutasCliente(),
+      'POST /auth/entrar': (o) {
+        cuerpo = o.data is String ? jsonDecode(o.data as String) : o.data;
+        return ok({..._tokens, 'nuevo': false, 'cliente': _yo});
+      },
+    });
+    final almacen = AlmacenMemoria()..datos[claveModo] = 'cliente';
+    await _abrir(t, red, almacen);
+    await t.tap(find.text('Ya tengo cuenta'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('cliente-nombre')), findsNothing); // solo correo y contraseña
+    expect(find.byKey(const Key('cliente-celular')), findsNothing);
+    await t.enterText(find.byKey(const Key('cliente-correo')), 'rosa@correo.pe');
+    await t.enterText(find.byKey(const Key('cliente-clave')), 'secreta-123');
+    await t.tap(find.byKey(const Key('cliente-entrar')));
+    await t.pumpAndSettle();
+    expect(cuerpo, {'correo': 'rosa@correo.pe', 'clave': 'secreta-123'});
+    expect(almacen.datos[claveRenovacionCliente], 'r2');
+    expect(find.text('¡Hola, Rosa!'), findsOneWidget);
+  });
+
+  testWidgets('crear una cuenta con un correo que ya existe lleva a «Ya tengo cuenta»', (t) async {
+    final red = RedFalsa({
+      ..._rutasCliente(),
+      'POST /auth/registro': (_) => (
+        status: 409,
+        cuerpo: {'codigo': 'cuenta_existe', 'detail': 'Ya tienes una cuenta con ese correo. Entra con tu contraseña.'},
+      ),
+    });
+    await _abrir(t, red, AlmacenMemoria()..datos[claveModo] = 'cliente');
+    await t.enterText(find.byKey(const Key('cliente-nombre')), 'Rosa Paz');
+    await t.enterText(find.byKey(const Key('cliente-correo')), 'rosa@correo.pe');
+    await t.enterText(find.byKey(const Key('cliente-celular')), '987654321');
+    await t.enterText(find.byKey(const Key('cliente-clave')), 'secreta-123');
+    await t.ensureVisible(find.byKey(const Key('cliente-acepta')));
+    await t.tap(find.byKey(const Key('cliente-acepta')));
+    await t.pump();
+    await t.ensureVisible(find.byKey(const Key('cliente-entrar')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('cliente-entrar')));
+    await t.pumpAndSettle();
+    expect(find.textContaining('Ya tienes una cuenta'), findsOneWidget);
+    expect(find.byKey(const Key('cliente-nombre')), findsNothing); // ya está en «Ya tengo cuenta»
+    expect(find.text('Entrar'), findsOneWidget);
   });
 
   testWidgets('reserva desde la app: con quién, hora y cupón', (t) async {
@@ -293,6 +343,8 @@ void main() {
     await _abrir(t, red, almacen);
     await t.tap(find.text('Perfil'));
     await t.pumpAndSettle();
+    await t.ensureVisible(find.byKey(const Key('cliente-salir')));
+    await t.pumpAndSettle();
     await t.tap(find.byKey(const Key('cliente-salir')));
     await t.pumpAndSettle();
     expect(find.text('Quiero reservar'), findsOneWidget);
@@ -335,5 +387,25 @@ void main() {
     await t.tap(find.byKey(const Key('negocio-glowclinic')));
     await t.pumpAndSettle();
     await capturar(t, 'cliente-negocio-$tema');
+  });
+
+  testWidgets('capturas de la entrada del cliente', (t) async {
+    if (carpetaCapturas == null) return;
+    final tema = Platform.environment['TEMA'] ?? 'claro';
+    await t.binding.setSurfaceSize(const Size(360, 780));
+    addTearDown(() => t.binding.setSurfaceSize(null));
+    await t.pumpWidget(
+      _app(
+        RedFalsa(_rutasCliente()),
+        AlmacenMemoria()
+          ..datos[claveModo] = 'cliente'
+          ..datos[claveTema] = tema,
+      ),
+    );
+    await t.pumpAndSettle();
+    await capturar(t, 'entrada-crear-$tema');
+    await t.tap(find.text('Ya tengo cuenta'));
+    await t.pumpAndSettle();
+    await capturar(t, 'entrada-entrar-$tema');
   });
 }

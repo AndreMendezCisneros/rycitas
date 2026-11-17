@@ -44,7 +44,7 @@ class ApiCliente:
 def _registro(cliente, nombre="Rosa Paz", correo="rosa@correo.pe", celular="987654321", **extra):
     return cliente.post(
         "/cliente/v1/auth/registro",
-        {"nombre": nombre, "correo": correo, "celular": celular, "acepta_politica": True, **extra},
+        {"nombre": nombre, "correo": correo, "celular": celular, "clave": "secreta-123", "acepta_politica": True, **extra},
         content_type="application/json",
     )
 
@@ -95,12 +95,56 @@ def test_registro_exige_aceptar_la_politica(cliente):
     assert r.status_code == 422
 
 
-def test_el_mismo_correo_entra_solo_con_el_mismo_whatsapp(cliente):
+def _entrar(cliente, correo="rosa@correo.pe", clave="secreta-123"):
+    return cliente.post("/cliente/v1/auth/entrar", {"correo": correo, "clave": clave}, content_type="application/json")
+
+
+def test_la_contrasena_se_guarda_cifrada_y_es_obligatoria(cliente):
+    assert _registro(cliente, clave="corta").json()["codigo"] == "clave_corta"
     _registro(cliente)
-    otra = _registro(cliente, celular="912345678")
-    assert otra.status_code == 409 and otra.json()["codigo"] == "datos_no_coinciden"
-    misma = _registro(cliente, correo="ROSA@correo.pe")
-    assert misma.status_code == 200 and misma.json()["nuevo"] is False
+    guardada = Cliente.objects.get(correo="rosa@correo.pe").clave
+    assert guardada and "secreta-123" not in guardada
+
+
+def test_crear_cuenta_con_un_correo_que_ya_existe_pide_entrar(cliente):
+    _registro(cliente)
+    otra = _registro(cliente, correo="ROSA@correo.pe")
+    assert otra.status_code == 409 and otra.json()["codigo"] == "cuenta_existe"
+
+
+def test_entrar_con_correo_y_contrasena(cliente):
+    _registro(cliente)
+    r = _entrar(cliente, correo=" Rosa@Correo.pe ")
+    assert r.status_code == 200, r.content
+    assert r.json()["acceso"] and r.json()["cliente"]["correo"] == "rosa@correo.pe"
+
+
+@pytest.mark.parametrize(("correo", "clave"), [("rosa@correo.pe", "otra-clave-9"), ("nadie@correo.pe", "secreta-123")])
+def test_entrar_mal_no_dice_si_el_correo_existe(cliente, correo, clave):
+    _registro(cliente)
+    r = _entrar(cliente, correo=correo, clave=clave)
+    assert r.status_code == 401 and r.json()["codigo"] == "credenciales"
+
+
+def test_una_cuenta_antigua_crea_su_contrasena_con_su_mismo_whatsapp(cliente):
+    _cuenta(verificado=False)  # de antes de las contraseñas
+    assert _entrar(cliente).json()["codigo"] == "sin_clave"
+    ajeno = _registro(cliente, celular="912345678")
+    assert ajeno.status_code == 409 and ajeno.json()["codigo"] == "datos_no_coinciden"
+    suyo = _registro(cliente)
+    assert suyo.status_code == 200 and suyo.json()["nuevo"] is False
+    assert _entrar(cliente).status_code == 200
+
+
+def test_cambiar_la_contrasena_pide_la_actual(cliente):
+    _registro(cliente)
+    app = ApiCliente(Cliente.objects.get(correo="rosa@correo.pe"))
+    mal = app.c.put("/cliente/v1/yo/clave", {"actual": "no-es-esta", "nueva": "nueva-clave-1"}, content_type="application/json")
+    assert mal.status_code == 422
+    bien = app.c.put("/cliente/v1/yo/clave", {"actual": "secreta-123", "nueva": "nueva-clave-1"}, content_type="application/json")
+    assert bien.status_code == 204
+    assert _entrar(cliente).status_code == 401
+    assert _entrar(cliente, clave="nueva-clave-1").status_code == 200
 
 
 def test_los_tokens_del_cliente_y_del_negocio_no_se_cruzan(doctor):

@@ -20,6 +20,8 @@ class Cliente(models.Model):
     correo = models.EmailField(unique=True)
     celular = models.CharField(max_length=40, db_index=True, help_text="E.164: +51987654321")
     correo_verificado_en = models.DateTimeField(null=True, blank=True)
+    # Hash de Django (PBKDF2), nunca el texto. Vacío en cuentas creadas antes de que hubiera contraseña.
+    clave = models.CharField(max_length=128, blank=True)
     celular_verificado_en = models.DateTimeField(
         null=True, blank=True, help_text="Al abrir en la app el enlace de una cita enviado a ese WhatsApp."
     )
@@ -46,6 +48,8 @@ class CodigoCorreo(models.Model):
     """Solo con VERIFICAR_CLIENTES=1: código de 6 dígitos por correo, vence en 10 min, 5 intentos."""
 
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="codigos")
+    # Cuenta antigua sin contraseña que la crea al registrarse: el hash se aplica solo al verificar el código.
+    clave_nueva = models.CharField(max_length=128, blank=True)
     codigo_hash = models.CharField(max_length=64)
     expira_en = models.DateTimeField()
     intentos = models.PositiveSmallIntegerField(default=0)

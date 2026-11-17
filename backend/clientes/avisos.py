@@ -12,6 +12,7 @@ import logging
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from django_q.tasks import async_task
 
 log = logging.getLogger(__name__)
@@ -43,9 +44,9 @@ def de_cita(cita, tipo: str) -> None:
         "movida": ("Tu cita cambió de hora", f"{negocio}: ahora es {cuando}."),
     }[tipo]
     datos = {"tipo": "cita", "cita_id": cita.pk, "negocio": cita.consultorio.slug}
-    celular = cita.paciente.celular
+    celular, cuenta = cita.paciente.celular, cita.cliente_id
     transaction.on_commit(
-        lambda: async_task("clientes.avisos.enviar", [celular], titulo, cuerpo, datos, None, True, CANAL_CITAS)
+        lambda: async_task("clientes.avisos.enviar", [celular], titulo, cuerpo, datos, None, True, CANAL_CITAS, cuenta)
     )
 
 
@@ -86,7 +87,17 @@ def recordar_citas() -> int:
                 titulo = "Mañana tienes cita ✨" if timezone.localtime(cita.inicio).date() > timezone.localdate() else "Hoy tienes cita ✨"
             cuerpo = f"{cita.consultorio.nombre}, {fecha_legible(cita.inicio)}."
             datos = {"tipo": "recordatorio", "cita_id": cita.pk, "negocio": cita.consultorio.slug}
-            async_task("clientes.avisos.enviar", [cita.paciente.celular], titulo, cuerpo, datos, None, True, CANAL_CITAS)
+            async_task(
+                "clientes.avisos.enviar",
+                [cita.paciente.celular],
+                titulo,
+                cuerpo,
+                datos,
+                None,
+                True,
+                CANAL_CITAS,
+                cita.cliente_id,
+            )
             enviados += 1
     return enviados
 
@@ -99,16 +110,22 @@ def enviar(
     consultorio_id: int | None = None,
     solo_verificados: bool = False,
     canal: str = "general_v2",
+    cuenta_id: int | None = None,
 ) -> int:
+    """Push a los clientes con esos celulares. [cuenta_id]: la cuenta que hizo la reserva desde la app, que recibe
+    los avisos de esa cita aunque aún no haya probado su WhatsApp."""
     from clientes.models import DispositivoCliente
     from mensajeria.push import _sesion_fcm
 
     if not settings.FIREBASE_PROJECT_ID or not settings.FIREBASE_CREDENCIALES:
         log.info("push al cliente omitido (Firebase sin configurar)")
         return 0
-    dispositivos = DispositivoCliente.objects.filter(cliente__celular__in=celulares, cliente__activo=True)
+    por_numero = Q(cliente__celular__in=celulares)
     if solo_verificados:
-        dispositivos = dispositivos.filter(cliente__celular_verificado_en__isnull=False)
+        por_numero &= Q(cliente__celular_verificado_en__isnull=False)
+    if cuenta_id is not None:
+        por_numero |= Q(cliente_id=cuenta_id)
+    dispositivos = DispositivoCliente.objects.filter(por_numero, cliente__activo=True)
     if consultorio_id is not None:  # quien silenció al negocio no recibe sus campañas
         dispositivos = dispositivos.exclude(cliente__silenciados__id=consultorio_id)
     url = f"https://fcm.googleapis.com/v1/projects/{settings.FIREBASE_PROJECT_ID}/messages:send"

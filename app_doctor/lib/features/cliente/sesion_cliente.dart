@@ -31,6 +31,7 @@ class SesionCliente extends Notifier<EstadoSesion> {
     required String nombre,
     required String correo,
     required String celular,
+    required String clave,
     String referido = '',
     bool aceptaPublicidad = false,
   }) async {
@@ -39,6 +40,7 @@ class SesionCliente extends Notifier<EstadoSesion> {
       'nombre': nombre.trim(),
       'correo': correo.trim(),
       'celular': celular.trim(),
+      'clave': clave,
       'referido': referido.trim(),
       'acepta_politica': true,
       'acepta_publicidad': aceptaPublicidad,
@@ -47,6 +49,14 @@ class SesionCliente extends Notifier<EstadoSesion> {
     await api.guardarTokens(datos);
     state = EstadoSesion.activa;
     return ResultadoRegistro.adentro;
+  }
+
+  /// «Ya tengo cuenta»: correo y contraseña.
+  Future<void> entrar({required String correo, required String clave}) async {
+    final api = ref.read(apiClienteProvider);
+    final datos = await api.post('/auth/entrar', {'correo': correo.trim(), 'clave': clave});
+    await api.guardarTokens(datos);
+    state = EstadoSesion.activa;
   }
 
   Future<void> verificar({required String correo, required String celular, required String codigo}) async {

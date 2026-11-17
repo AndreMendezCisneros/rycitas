@@ -90,6 +90,10 @@ class Cita(models.Model):
     precio_referencia = models.PositiveIntegerField("precio de referencia (céntimos)", null=True, blank=True)
     precio_ofrecido = models.PositiveIntegerField("precio ofrecido por el cliente (céntimos)", null=True, blank=True)
     precio_acordado = models.PositiveIntegerField("precio acordado (céntimos)", null=True, blank=True)
+    # Cuenta de la app que hizo la reserva: la ve y recibe sus avisos aunque aún no haya probado su WhatsApp.
+    cliente = models.ForeignKey(
+        "clientes.Cliente", null=True, blank=True, on_delete=models.SET_NULL, related_name="citas_reservadas"
+    )
     # Lo que el cliente pidió en detalle («corte en capas, traigo foto»). Dato personal: nunca va en un push ni en
     # los logs; solo lo ven el negocio y el propio cliente.
     notas = models.TextField(max_length=500, blank=True)

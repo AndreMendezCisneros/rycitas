@@ -35,6 +35,7 @@ class RegistroEntrada(Schema):
     nombre: str
     correo: str
     celular: str
+    clave: str = ""
     referido: str = ""
     acepta_politica: bool = False
     acepta_publicidad: bool = False  # aparte y opcional (DAT-02)
@@ -111,12 +112,36 @@ def registro(request, datos: RegistroEntrada):
         raise ErrorNegocio("sin_consentimiento", "Debes aceptar la política de datos para continuar.", 422)
     servicios.registrar_intento_ip(ip_cliente(request))
     resultado = autenticacion.registrar(
-        datos.nombre, datos.correo, datos.celular, datos.referido, acepta_publicidad=datos.acepta_publicidad
+        datos.nombre,
+        datos.correo,
+        datos.celular,
+        datos.clave,
+        datos.referido,
+        acepta_publicidad=datos.acepta_publicidad,
     )
     if "sesion" in resultado:
         cliente = Cliente.objects.get(correo=datos.correo.strip().lower())
         return {**resultado["sesion"], "nuevo": resultado["nuevo"], "cliente": _yo(cliente)}
     return resultado
+
+
+class EntradaCliente(Schema):
+    correo: str
+    clave: str
+
+
+class CambioClave(Schema):
+    actual: str = ""
+    nueva: str
+
+
+@router_sesion.post("/entrar")
+def entrar(request, datos: EntradaCliente):
+    """«Ya tengo cuenta»: correo y contraseña."""
+    servicios.registrar_intento_ip(ip_cliente(request))
+    resultado = autenticacion.entrar(datos.correo, datos.clave)
+    cliente = Cliente.objects.get(correo=datos.correo.strip().lower())
+    return {**resultado["sesion"], "nuevo": False, "cliente": _yo(cliente)}
 
 
 @router_sesion.post("/verificar")
@@ -189,6 +214,12 @@ def dispositivo(request, datos: DispositivoEntrada):
     DispositivoCliente.objects.update_or_create(
         token_fcm=datos.token_fcm, defaults={"cliente": request.auth, "plataforma": datos.plataforma}
     )
+    return 204, None
+
+
+@router.put("/yo/clave", response={204: None})
+def cambiar_clave(request, datos: CambioClave):
+    autenticacion.cambiar_clave(request.auth, datos.actual, datos.nueva)
     return 204, None
 
 
@@ -353,6 +384,7 @@ def reservar(request, slug: str, datos: ReservaEntrada):
             profesional_id=datos.profesional,
             notas=datos.notas,
         )
+        Cita.objects.filter(pk=cita.pk).update(cliente=cliente)
         if cupon is not None:
             CuponUsado.objects.create(cupon=cupon, cita=cita, celular=cliente.celular)
     return 201, {**presentacion.reserva_creada(cita), "cupon": fidelidad.cupon_publico(cupon) if cupon else None}
@@ -390,11 +422,13 @@ def _cita_cliente(cita: Cita) -> dict:
 @router.get("/mis-citas")
 def mis_citas(request):
     cliente = request.auth
-    if not _celular_confiable(cliente):
-        return {"proximas": [], "pasadas": []}
+    # Lo que reservó desde la app lo ve siempre; el resto de citas de su número, cuando probó que el WhatsApp es suyo.
+    mias = Q(cliente=cliente)
+    if _celular_confiable(cliente):
+        mias |= Q(paciente__celular=cliente.celular)
     consulta = (
         Cita.objects.select_related("consultorio", "tratamiento", "profesional", "paciente", "cupon_usado__cupon")
-        .filter(paciente__celular=cliente.celular, consultorio__activo=True)
+        .filter(mias, consultorio__activo=True)
         .exclude(estado__in=[Estado.PENDIENTE, Estado.EXPIRADA])
     )
     ahora = timezone.now()

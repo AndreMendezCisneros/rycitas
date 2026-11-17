@@ -197,8 +197,8 @@ class _MisLugares extends ConsumerWidget {
               const AvisoSuave(
                 icono: Icons.verified_user_outlined,
                 texto:
-                    'Para ver tus citas, sellos y cupones, confirma que este WhatsApp es tuyo: pega el enlace de '
-                    'una de tus citas, el que te mandó el negocio por WhatsApp.',
+                    'Lo que reservas aquí ya aparece en «Mis citas». Para ver también las citas que hiciste por '
+                    'WhatsApp o en la web, y tus sellos y cupones, pega el enlace que te mandó el negocio al confirmar.',
               ),
               FilledButton.tonalIcon(
                 key: const Key('vincular-enlace'),
@@ -288,6 +288,53 @@ class PerfilClientePantalla extends ConsumerWidget {
     }
   }
 
+  Future<void> _cambiarClave(BuildContext context, WidgetRef ref) async {
+    final actual = TextEditingController();
+    final nueva = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogo) => AlertDialog(
+        title: const Text('Cambiar contraseña'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              key: const Key('clave-actual'),
+              controller: actual,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Contraseña actual',
+                helperText: 'Si tu cuenta aún no tenía, déjala vacía.',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('clave-nueva'),
+              controller: nueva,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Nueva contraseña', helperText: 'Mínimo 8 caracteres.'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogo, false), child: const Text('Cancelar')),
+          FilledButton(
+            key: const Key('guardar-clave'),
+            onPressed: () => Navigator.pop(dialogo, true),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClienteProvider).put('/yo/clave', {'actual': actual.text, 'nueva': nueva.text});
+      if (context.mounted) avisar(context, 'Contraseña actualizada');
+    } on ApiError catch (e) {
+      if (context.mounted) avisar(context, e.mensaje);
+    }
+  }
+
   /// Derecho de cancelación (y requisito de Google Play): la cuenta se borra desde la propia app.
   Future<void> _eliminarCuenta(BuildContext context, WidgetRef ref) async {
     final ok = await confirmar(
@@ -357,6 +404,12 @@ class PerfilClientePantalla extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
+                  ListTile(
+                    key: const Key('cliente-cambiar-clave'),
+                    leading: const Icon(Icons.lock_reset_rounded),
+                    title: const Text('Cambiar contraseña'),
+                    onTap: () => _cambiarClave(context, ref),
+                  ),
                   ListTile(
                     leading: const Icon(Icons.storefront_outlined),
                     title: const Text('Usar como negocio'),
