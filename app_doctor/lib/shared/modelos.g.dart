@@ -76,6 +76,7 @@ _Cita _$CitaFromJson(Map<String, dynamic> json) => _Cita(
   paciente: PacienteRef.fromJson(json['paciente'] as Map<String, dynamic>),
   cupon: json['cupon'] == null ? null : CuponCita.fromJson(json['cupon'] as Map<String, dynamic>),
   notas: json['notas'] as String? ?? '',
+  enSuApp: json['en_su_app'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$CitaToJson(_Cita instance) => <String, dynamic>{
@@ -104,6 +105,7 @@ Map<String, dynamic> _$CitaToJson(_Cita instance) => <String, dynamic>{
   'paciente': instance.paciente.toJson(),
   'cupon': instance.cupon?.toJson(),
   'notas': instance.notas,
+  'en_su_app': instance.enSuApp,
 };
 
 _Hueco _$HuecoFromJson(Map<String, dynamic> json) =>

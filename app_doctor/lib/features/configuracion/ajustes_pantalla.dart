@@ -74,6 +74,15 @@ class AjustesPantalla extends ConsumerWidget {
                 ),
               if (negocio.esGeneral)
                 _Opcion(
+                  key: const Key('ajustes-reglas'),
+                  icono: Icons.rule_rounded,
+                  color: const Color(0xFF14B8A6),
+                  titulo: 'Reglas de reserva',
+                  detalle: 'Anticipación y hasta cuándo cancelan o mueven',
+                  alTocar: () => context.push('/ajustes/reglas'),
+                ),
+              if (negocio.esGeneral)
+                _Opcion(
                   icono: Icons.view_agenda_rounded,
                   color: const Color(0xFFF59E0B),
                   titulo: 'Turnos de la agenda',

@@ -82,9 +82,11 @@ def turnos_con_rango(turnos: list[dict]) -> list[dict]:
     return resultado
 
 REGLAS_POR_DEFECTO = {
-    "anticipacion_min_horas": 2,
+    # 1 h: con 2 h y un cierre a las 18:00, desde las 16:00 ya no se podía reservar para el mismo día.
+    "anticipacion_min_horas": 1,
     "dias_maximos": 30,
-    "limite_cancelacion_horas": 12,
+    # Hasta cuántas horas antes el cliente cancela o mueve su cita desde la app o su enlace.
+    "limite_cancelacion_horas": 4,
     "margen_entre_citas_min": 0,
     "paso_min": 15,
 }

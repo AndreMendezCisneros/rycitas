@@ -258,6 +258,73 @@ void main() {
     expect(creada?['notas'], 'Degradado bajo');
   });
 
+  testWidgets('reserva rápida: si el número tiene la app pregunta «¿Es esta persona?» y la vincula', (t) async {
+    Map<String, dynamic>? creada;
+    final red = RedFalsa({
+      'POST /auth/refresh': (_) => ok(tokens),
+      'GET /negocio': (_) => ok(negocioJson()),
+      'GET /agenda': (_) => ok(hoy),
+      'GET /tratamientos': (_) => ok({
+        'tratamientos': [
+          {'id': 1, 'nombre': 'Corte clásico', 'duracion_min': 30},
+        ],
+      }),
+      'GET /clientes-app': (o) => ok(
+        o.queryParameters['celular'] == '987654321'
+            ? {'tiene_app': true, 'nombre': 'Andre Mendez'}
+            : {'tiene_app': false},
+      ),
+      'GET /citas/disponibilidad': (_) => ok({
+        'dias': [
+          {
+            'fecha': '2026-11-10',
+            'horas': ['2026-11-10T10:00:00-05:00'],
+          },
+        ],
+      }),
+      'POST /citas': (o) {
+        creada = o.data as Map<String, dynamic>;
+        return (
+          status: 201,
+          cuerpo: {
+            'cita_id': 9,
+            'estado': 'programada',
+            'whatsapp_url': 'https://wa.me/51987654321',
+            'agenda': hoy,
+            'en_su_app': true,
+          },
+        );
+      },
+    });
+    await abrir(t, red, conSesion());
+    await t.tap(find.byKey(const Key('fab-reserva-rapida')));
+    await t.pumpAndSettle();
+    t.view.physicalSize = const Size(1080, 2340);
+    t.view.devicePixelRatio = 2.75;
+    addTearDown(t.view.reset);
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('rapida-nuevo')));
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('rapida-nombre')), 'Andre Mendez');
+    await t.enterText(find.byKey(const Key('rapida-celular')), '98765432');
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('tarjeta-cliente-app')), findsNothing); // aún incompleto
+    await t.enterText(find.byKey(const Key('rapida-celular')), '987654321');
+    await t.pump(const Duration(milliseconds: 100));
+    await t.pumpAndSettle();
+    expect(find.text('Andre Mendez tiene la app. ¿Es esta persona?'), findsOneWidget);
+    await t.ensureVisible(find.byKey(const Key('rapida-servicio-1')));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('rapida-servicio-1')));
+    await t.pumpAndSettle();
+    final boton = find.byKey(const Key('reservar-rapido'));
+    await t.ensureVisible(boton);
+    await t.tap(boton);
+    await t.pumpAndSettle();
+    expect(creada?['vincular_app'], true);
+    expect(find.textContaining('Ya le llegó la notificación a su app'), findsOneWidget);
+  });
+
   testWidgets('nueva cita: la cuenta general elige con quién y eso viaja a la API', (t) async {
     Map<String, dynamic>? horasPedidas;
     Map<String, dynamic>? creada;

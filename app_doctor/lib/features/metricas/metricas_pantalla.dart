@@ -88,10 +88,7 @@ class _MetricasPantallaState extends ConsumerState<MetricasPantalla> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Container(
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: context.tonos.ambarFondo,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    decoration: BoxDecoration(color: context.tonos.ambarFondo, borderRadius: BorderRadius.circular(16)),
                     child: Text(
                       a.porConfirmar == 1
                           ? '1 reserva espera tu respuesta.'

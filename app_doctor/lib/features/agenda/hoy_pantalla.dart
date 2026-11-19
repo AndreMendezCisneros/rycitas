@@ -649,7 +649,10 @@ class _TarjetaCita extends ConsumerWidget {
                         if (cita.paciente.inasistencias > 0)
                           Text(
                             '${cita.paciente.inasistencias} inasistencia${cita.paciente.inasistencias == 1 ? '' : 's'}',
-                            style: textos.bodySmall?.copyWith(color: context.tonos.ambarTexto, fontWeight: FontWeight.w600),
+                            style: textos.bodySmall?.copyWith(
+                              color: context.tonos.ambarTexto,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         if (cita.notas.isNotEmpty) NotaCita(cita.notas, compacta: true),
                         const SizedBox(height: 8),

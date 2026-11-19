@@ -115,6 +115,8 @@ class _FidelidadState extends ConsumerState<FidelidadPantalla> {
                 ],
               ),
               const SizedBox(height: 16),
+              const AyudaCobrar(),
+              const SizedBox(height: 8),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -211,6 +213,8 @@ class CuponesPantalla extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
+              const AyudaCobrar(),
+              const SizedBox(height: 8),
               for (final c in cupones)
                 Card(
                   key: Key('cupon-${c['codigo']}'),
@@ -625,6 +629,59 @@ class TarjetaDelCliente extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// «¿Cómo cobra el cliente su premio o su cupón?»: los pasos, para que el negocio no se pierda.
+class AyudaCobrar extends StatelessWidget {
+  const AyudaCobrar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final voc = vocDe(context);
+    final textos = Theme.of(context).textTheme;
+    Widget paso(String n, String texto) => Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(radius: 11, child: Text(n, style: const TextStyle(fontSize: 12))),
+          const SizedBox(width: 10),
+          Expanded(child: Text(texto, style: textos.bodyMedium)),
+        ],
+      ),
+    );
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        key: const Key('ayuda-cobrar'),
+        leading: const Icon(Icons.help_outline_rounded),
+        title: Text('¿Cómo cobra el ${voc.cliente} su premio o cupón?'),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text('Tarjeta de sellos', style: textos.titleSmall),
+          ),
+          const SizedBox(height: 6),
+          paso('1', 'Cada visita que marcas como «Atendida» le da un sello; si marcaste «Llegó» a tiempo, uno más.'),
+          paso('2', 'Cuando la llena, le llega una notificación y te muestra el premio en su app.'),
+          paso(
+            '3',
+            'Entrégale el premio: ${Vocabulario.may(voc.clientes)} → su nombre → «Entregar premio». La tarjeta empieza de nuevo.',
+          ),
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text('Cupones', style: textos.titleSmall),
+          ),
+          const SizedBox(height: 6),
+          paso('1', 'Créalo aquí y envíalo en «Enviar una promoción»: llega como notificación a quienes lo aceptaron.'),
+          paso('2', 'El ${voc.cliente} lo elige al reservar desde su app. Lo verás en la cita: «Cupón … · 20 %».'),
+          paso('3', 'Descuéntalo al cobrar. Cada cupón sirve una vez; si la cita se cancela, vuelve a quedar libre.'),
+        ],
       ),
     );
   }

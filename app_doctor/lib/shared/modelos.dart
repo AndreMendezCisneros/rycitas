@@ -72,6 +72,9 @@ abstract class Cita with _$Cita {
 
     /// Lo que pidió en detalle («corte en capas, traigo foto»).
     @Default('') String notas,
+
+    /// La cita aparece en la app del cliente.
+    @Default(false) bool enSuApp,
   }) = _Cita;
 
   factory Cita.fromJson(Map<String, dynamic> json) => _$CitaFromJson(json);

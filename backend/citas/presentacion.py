@@ -212,6 +212,8 @@ def cita_doctor(cita: Cita, estimacion: Estimacion | None = None) -> dict:
         },
         "cupon": _cupon_de(cita),
         "notas": cita.notas,
+        # La cita está en la app del cliente (la reservó ahí o el negocio la vinculó con «¿Es esta persona?»).
+        "en_su_app": cita.cliente_id is not None,
     }
 
 

@@ -24,6 +24,7 @@ Future<void> mostrarAccionesCita(BuildContext context, WidgetRef ref, Cita cita,
     if (cita.precioTexto != null) cita.precioTexto!,
     cita.paciente.celular,
   ].join('\n');
+  final cupon = cita.cupon;
   // Desplazable y con alto máximo: en celulares chicos las 7 acciones no caben enteras (antes: «overflowed»).
   final eleccion = await showModalBottomSheet<String>(
     context: context,
@@ -40,6 +41,13 @@ Future<void> mostrarAccionesCita(BuildContext context, WidgetRef ref, Cita cita,
             ),
             if (cita.notas.isNotEmpty)
               Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 10), child: NotaCita(cita.notas)),
+            if (cupon != null)
+              ListTile(
+                key: const Key('cupon-detalle'),
+                leading: const Icon(Icons.local_offer_outlined),
+                title: Text('Cupón ${cupon.codigo} · ${cupon.descuento}'),
+                subtitle: Text('${cupon.titulo}. Descuéntalo al cobrar.'),
+              ),
             const Divider(height: 1),
             if (cita.porAprobar)
               ListTile(
@@ -67,6 +75,14 @@ Future<void> mostrarAccionesCita(BuildContext context, WidgetRef ref, Cita cita,
               subtitle: const Text('Lo que pidió o lo que debes recordar'),
               onTap: () => Navigator.pop(hoja, 'notas'),
             ),
+            if (puedeCambiar && !cita.enSuApp)
+              ListTile(
+                key: const Key('vincular-app-cita'),
+                leading: const Icon(Icons.phone_iphone_rounded),
+                title: const Text('Vincular con su app'),
+                subtitle: Text('Si el ${voc.cliente} tiene la app, la cita aparece ahí y le llega el aviso'),
+                onTap: () => Navigator.pop(hoja, 'vincular'),
+              ),
             ListTile(
               leading: const Icon(Icons.chat_outlined),
               title: const Text('Escribir por WhatsApp'),
@@ -107,6 +123,14 @@ Future<void> mostrarAccionesCita(BuildContext context, WidgetRef ref, Cita cita,
       await ejecutarDecision(context, ref, cita.id, 'rechazar', 'Reserva rechazada', alCambiar: alCambiar);
     case 'notas':
       await editarNotasCita(context, ref, cita, alCambiar: alCambiar);
+    case 'vincular':
+      try {
+        await ref.read(apiProvider).post('/citas/${cita.id}/vincular-app');
+        if (context.mounted) avisar(context, 'Listo: la cita ya está en su app y le llegó la notificación.');
+        alCambiar?.call();
+      } on ApiError catch (e) {
+        if (context.mounted) avisar(context, e.mensaje);
+      }
     case 'whatsapp':
       await abrirWhatsapp(context, 'https://wa.me/${cita.paciente.celular.replaceAll('+', '')}');
     case 'llamar':

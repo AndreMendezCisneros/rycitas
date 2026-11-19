@@ -19,6 +19,7 @@ import '../features/configuracion/avisos_pantalla.dart';
 import '../features/configuracion/bloqueos_pantalla.dart';
 import '../features/configuracion/horario_pantalla.dart';
 import '../features/configuracion/tratamientos_pantalla.dart';
+import '../features/configuracion/reglas_pantalla.dart';
 import '../features/configuracion/turnos_pantalla.dart';
 import '../features/fidelizacion/fidelizacion_pantallas.dart';
 import '../features/metricas/metricas_pantalla.dart';
@@ -179,6 +180,7 @@ final rutasProvider = Provider<GoRouter>((ref) {
         pageBuilder: (_, estado) => paginaConTransicion(estado, const HorarioPantalla()),
       ),
       GoRoute(path: '/ajustes/turnos', pageBuilder: (_, estado) => paginaConTransicion(estado, const TurnosPantalla())),
+      GoRoute(path: '/ajustes/reglas', pageBuilder: (_, estado) => paginaConTransicion(estado, const ReglasPantalla())),
       GoRoute(path: '/ajustes/avisos', pageBuilder: (_, estado) => paginaConTransicion(estado, const AvisosPantalla())),
       GoRoute(
         path: '/ajustes/bloqueos',

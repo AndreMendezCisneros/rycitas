@@ -9,6 +9,7 @@ import '../../shared/comunes.dart';
 import '../../shared/modelos.dart';
 import '../agenda/agenda_controlador.dart';
 import '../configuracion/tratamientos_pantalla.dart';
+import 'cliente_app.dart';
 import 'selector_hora.dart';
 
 /// Cita por teléfono: servicio, con quién (si hay varios y la cuenta es general), hora libre y cliente (RF-23).
@@ -29,6 +30,7 @@ class _NuevaCitaPantallaState extends ConsumerState<NuevaCitaPantalla> {
   final _nombre = TextEditingController();
   final _celular = TextEditingController();
   bool _enviando = false;
+  bool _vincularApp = true;
   String? _error;
 
   @override
@@ -68,11 +70,17 @@ class _NuevaCitaPantallaState extends ConsumerState<NuevaCitaPantalla> {
         'nombre': _nombre.text.trim(),
         'celular': _celular.text.trim(),
         'profesional_id': ?_profesional?.id,
+        'vincular_app': _vincularApp,
       });
       ref.read(agendaProvider.notifier).aplicarAgenda(datos['agenda'] as Map<String, dynamic>);
       if (mounted) {
         // Se le envía el enlace con su calendario: es su único recordatorio.
-        await ofrecerAviso(context, 'Cita registrada', datos['whatsapp_url'] as String?);
+        await ofrecerAviso(
+          context,
+          'Cita registrada',
+          datos['whatsapp_url'] as String?,
+          enSuApp: datos['en_su_app'] == true,
+        );
       }
       if (mounted) context.pop();
     } on ApiError catch (e) {
@@ -212,7 +220,13 @@ class _NuevaCitaPantallaState extends ConsumerState<NuevaCitaPantalla> {
         TextField(
           controller: _celular,
           keyboardType: TextInputType.phone,
+          onChanged: (_) => setState(() {}),
           decoration: const InputDecoration(labelText: 'Celular', hintText: '987 654 321', prefixText: '+51 '),
+        ),
+        TarjetaClienteApp(
+          celular: _celular.text,
+          vincular: _vincularApp,
+          alCambiar: (v) => setState(() => _vincularApp = v),
         ),
         if (_error != null) ...[
           const SizedBox(height: 12),

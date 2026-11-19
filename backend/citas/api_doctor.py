@@ -25,6 +25,13 @@ class CitaEntrada(Schema):
     celular: str
     profesional_id: int | None = None
     notas: str = ""
+    # El negocio confirmó «¿Es él?»: la cita aparece en su app y le llega el aviso.
+    vincular_app: bool = False
+
+
+class ReglasEntrada(Schema):
+    anticipacion_min_horas: int | None = None
+    limite_cancelacion_horas: int | None = None
 
 
 class NotasEntrada(Schema):
@@ -96,16 +103,29 @@ def _turnos_del_dia(consultorio, citas: list[Cita]) -> list[dict]:
     return turnos
 
 
+def _unir_huecos(huecos: list[Intervalo]) -> list[Intervalo]:
+    unidos: list[Intervalo] = []
+    for h in sorted(huecos, key=lambda x: x.inicio):
+        if unidos and h.inicio <= unidos[-1].fin:
+            unidos[-1] = Intervalo(unidos[-1].inicio, max(unidos[-1].fin, h.fin))
+        else:
+            unidos.append(h)
+    return unidos
+
+
 def _agenda(consultorio, fecha: date, profesional: Profesional | None = None) -> dict:
     citas = list(servicios.citas_de_rango(consultorio, fecha, fecha + timedelta(days=1), profesional))
     estimaciones, retraso = servicios.estimar_fecha(consultorio, fecha)
     ahora = timezone.now()
-    # Los huecos son de una agenda: con varios profesionales y «Todos» no hay un hueco único que mostrar.
-    agenda_de = profesional
-    if agenda_de is None and consultorio.opciones_efectivas["modo_agenda"] != "por_profesional":
-        agenda_de = consultorio.profesional_principal()
+    # Los huecos son de una agenda. Con varios profesionales y «Todos»: el tiempo en que al menos uno está libre.
+    if profesional is not None:
+        agendas = [profesional]
+    elif consultorio.opciones_efectivas["modo_agenda"] != "por_profesional":
+        agendas = [consultorio.profesional_principal()]
+    else:
+        agendas = list(consultorio.profesionales.filter(activo=True))
     huecos = []
-    if agenda_de is not None:
+    for agenda_de in agendas:
         ocupados = servicios.ocupados_de(
             consultorio,
             servicios._inicio_de_dia(fecha),
@@ -113,9 +133,12 @@ def _agenda(consultorio, fecha: date, profesional: Profesional | None = None) ->
             ahora,
             profesional=agenda_de,
         )
-        huecos = huecos_del_dia(fecha, servicios.tramos_de(consultorio, agenda_de), ocupados)
+        huecos += huecos_del_dia(fecha, servicios.tramos_de(consultorio, agenda_de), ocupados)
+    huecos = _unir_huecos(huecos)
     if fecha == timezone.localdate():  # el tiempo que ya pasó no es un hueco aprovechable
-        huecos = [Intervalo(max(h.inicio, ahora), h.fin) for h in huecos if h.fin > ahora]
+        # Empieza en la próxima hora redonda del paso (12:07 → 12:15): así coincide con las horas de la reserva.
+        desde = servicios.redondear_al_paso(ahora, consultorio.reglas_efectivas["paso_min"])
+        huecos = [Intervalo(max(h.inicio, desde), h.fin) for h in huecos if h.fin > desde]
     return {
         "fecha": fecha.isoformat(),
         "retraso_min": retraso,
@@ -274,9 +297,61 @@ def crear(request, datos: CitaEntrada):
         # Una cuenta de profesional solo agenda en su propia agenda.
         request.auth.profesional_id or datos.profesional_id,
         notas=datos.notas,
+        vincular_app=datos.vincular_app,
     )
     # Sin este aviso, quien reservó por teléfono no recibiría nunca su enlace ni su calendario.
-    return 201, _con_aviso(request, cita)
+    return 201, {**_con_aviso(request, cita), "en_su_app": cita.cliente_id is not None}
+
+
+@router.get("/clientes-app")
+def cliente_app(request, celular: str):
+    """¿Ese número tiene la app? Solo el nombre (nunca el correo), para preguntar «¿Es él?» al reservar."""
+    try:
+        numero = servicios.normalizar_celular(celular)
+    except ErrorNegocio:
+        return {"tiene_app": False}
+    cuenta = servicios.cuenta_de_app(numero)
+    if cuenta is None:
+        return {"tiene_app": False}
+    return {"tiene_app": True, "nombre": cuenta.nombre}
+
+
+@router.post("/citas/{cita_id}/vincular-app")
+def vincular_app(request, cita_id: int):
+    """Para una cita ya creada: pasa a la app del cliente y le llega el aviso."""
+    cita = servicios.vincular_cita_con_app(request.auth.consultorio, request.auth, cita_id)
+    return {"cita_id": cita.pk, "en_su_app": True}
+
+
+@router.get("/reglas")
+def reglas(request):
+    r = request.auth.consultorio.reglas_efectivas
+    return {
+        "anticipacion_min_horas": r["anticipacion_min_horas"],
+        "limite_cancelacion_horas": r["limite_cancelacion_horas"],
+        "puede_cambiar": request.auth.profesional_id is None,
+    }
+
+
+@router.put("/reglas")
+def guardar_reglas(request, datos: ReglasEntrada):
+    """Con cuánta anticipación se reserva y hasta cuándo el cliente cancela o mueve. Solo la cuenta general."""
+    if request.auth.profesional_id:
+        raise ErrorNegocio("solo_general", "Solo la cuenta general del negocio cambia las reglas.", 403)
+    cambios = {}
+    for campo, valor in (
+        ("anticipacion_min_horas", datos.anticipacion_min_horas),
+        ("limite_cancelacion_horas", datos.limite_cancelacion_horas),
+    ):
+        if valor is None:
+            continue
+        if not 0 <= valor <= 72:
+            raise ErrorNegocio("regla_invalida", "Elige entre 0 y 72 horas.", 422)
+        cambios[campo] = valor
+    consultorio = request.auth.consultorio
+    consultorio.reglas = {**(consultorio.reglas or {}), **cambios}
+    consultorio.save(update_fields=["reglas"])
+    return reglas(request)
 
 
 @router.put("/citas/{cita_id}/notas")

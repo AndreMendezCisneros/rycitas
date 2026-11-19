@@ -16,6 +16,7 @@ import '../../shared/modelos.dart';
 import '../agenda/agenda_controlador.dart';
 import '../configuracion/tratamientos_pantalla.dart';
 import '../pacientes/pacientes_pantalla.dart';
+import 'cliente_app.dart';
 import 'selector_hora.dart';
 import '../../shared/diseno/tonos.dart';
 
@@ -56,6 +57,7 @@ class _ReservaRapidaState extends ConsumerState<ReservaRapida> {
   String? _fecha;
   String? _inicio;
   bool _verTodas = false;
+  bool _vincularApp = true;
   bool _enviando = false;
   String? _error;
 
@@ -115,6 +117,7 @@ class _ReservaRapidaState extends ConsumerState<ReservaRapida> {
         'celular': _celular.text.trim(),
         'profesional_id': ?_profesional?.id,
         if (_notas.text.trim().isNotEmpty) 'notas': _notas.text.trim(),
+        'vincular_app': _vincularApp,
       });
       ref.read(agendaProvider.notifier).aplicarAgenda(datos['agenda'] as Map<String, dynamic>);
       HapticFeedback.mediumImpact();
@@ -123,7 +126,12 @@ class _ReservaRapidaState extends ConsumerState<ReservaRapida> {
       final contextoRaiz = navegador.context;
       navegador.pop();
       if (contextoRaiz.mounted) {
-        await ofrecerAviso(contextoRaiz, 'Cita registrada', datos['whatsapp_url'] as String?);
+        await ofrecerAviso(
+          contextoRaiz,
+          'Cita registrada',
+          datos['whatsapp_url'] as String?,
+          enSuApp: datos['en_su_app'] == true,
+        );
       }
     } on ApiError catch (e) {
       if (!mounted) return;
@@ -272,7 +280,9 @@ class _ReservaRapidaState extends ConsumerState<ReservaRapida> {
                   child: const Text('Cambiar'),
                 ),
               ),
-            )
+            ),
+          if (_paciente != null)
+            _tarjetaApp()
           else ...[
             TextField(
               key: const Key('rapida-nombre'),
@@ -291,6 +301,7 @@ class _ReservaRapidaState extends ConsumerState<ReservaRapida> {
               onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(labelText: 'Celular', hintText: '987 654 321', prefixText: '+51 '),
             ),
+            _tarjetaApp(),
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
@@ -364,6 +375,12 @@ class _ReservaRapidaState extends ConsumerState<ReservaRapida> {
       ],
     );
   }
+
+  Widget _tarjetaApp() => TarjetaClienteApp(
+    celular: _celular.text,
+    vincular: _vincularApp,
+    alCambiar: (v) => setState(() => _vincularApp = v),
+  );
 
   Widget _pasoServicio() {
     final tratamientos = ref.watch(tratamientosProvider);

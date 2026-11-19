@@ -1,9 +1,9 @@
-"""Gamificación del cliente: logros, racha, puntos y nivel global. Se calcula al vuelo con sus citas y sellos (sin
+"""Gamificación del cliente: logros, racha y nivel global (los puntos se quitaron: no servían para nada y confundían). Se calcula al vuelo con sus citas y sellos (sin
 tablas nuevas), en todos los lugares donde reservó con su WhatsApp.
 
 Gamificación sin culpa:
 - La racha no castiga: un mes sin visita la deja «en pausa», no la borra.
-- Las recompensas reales siguen siendo los sellos y cupones de cada negocio; los puntos solo muestran el avance.
+- Las recompensas reales son los sellos y cupones de cada negocio; logros y nivel solo muestran el avance.
 """
 from __future__ import annotations
 
@@ -87,7 +87,7 @@ def resumen(cliente: Cliente, confiable: bool) -> dict:
             logro("racha", "Racha de 3 meses", "Visita algún lugar 3 meses seguidos.", racha, 3, "fuego"),
         ],
         "visitas": visitas,
-        "puntos": sellos * 10 + visitas * 5,
+        "sellos": sellos,
         "racha": racha,
         "racha_activa": activa,
         "nivel": _nivel(visitas),

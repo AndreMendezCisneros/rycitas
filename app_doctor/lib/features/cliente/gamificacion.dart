@@ -22,7 +22,7 @@ IconData _icono(String clave) => switch (clave) {
   _ => Icons.emoji_events_rounded,
 };
 
-/// Progreso del cliente en el inicio: nivel con su barra, racha y puntos. Siempre dice cuánto falta (sin culpas).
+/// Progreso del cliente en el inicio: nivel con su barra, racha y sellos. Siempre dice cuánto falta (sin culpas).
 class TarjetaProgreso extends ConsumerWidget {
   const TarjetaProgreso({super.key});
 
@@ -75,8 +75,8 @@ class TarjetaProgreso extends ConsumerWidget {
                           color: const Color(0xFFF97316),
                         ),
                         _Pildora(
-                          icono: Icons.auto_awesome_rounded,
-                          texto: '${d['puntos']} puntos',
+                          icono: Icons.verified_rounded,
+                          texto: '${d['visitas'] ?? 0} visita${d['visitas'] == 1 ? '' : 's'}',
                           color: context.tonos.acento,
                         ),
                       ],

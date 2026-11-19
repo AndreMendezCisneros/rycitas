@@ -149,6 +149,19 @@ class CuponUsado(models.Model):
     creado_en = models.DateTimeField(auto_now_add=True)
 
 
+class Seguimiento(models.Model):
+    """«Sigo a este negocio» desde la app. Con `promos`, el permiso aparte para recibir sus promociones y cupones
+    (DAT-02): se da negocio por negocio."""
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name="seguimientos")
+    consultorio = models.ForeignKey(Consultorio, on_delete=models.CASCADE, related_name="seguidores")
+    promos = models.BooleanField(default=False)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["cliente", "consultorio"], name="seguimiento_unico")]
+
+
 class Campana(models.Model):
     """Mensaje del negocio a sus clientes (máx. 2 por semana): push a quienes tienen la app y enlaces wa.me para
     enviar a mano al resto."""

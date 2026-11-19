@@ -216,7 +216,8 @@ def cupon_vigente(cupon: Cupon) -> bool:
     return cupon.usos_max is None or usos(cupon) < cupon.usos_max
 
 
-def cupones_para(consultorio: Consultorio, celular: str) -> list[Cupon]:
+def cupones_para(consultorio: Consultorio, celular: str, seguidor: bool = False) -> list[Cupon]:
+    """[seguidor]: sigue al negocio en la app. Recibe los cupones para «Todos» aunque aún no tenga una visita."""
     usados = set(
         CuponUsado.objects.filter(celular=celular, cupon__consultorio=consultorio)
         .exclude(cita__estado__in=CAIDAS)
@@ -225,7 +226,9 @@ def cupones_para(consultorio: Consultorio, celular: str) -> list[Cupon]:
     return [
         c
         for c in Cupon.objects.filter(consultorio=consultorio, activo=True, vence_el__gte=timezone.localdate())
-        if c.pk not in usados and cupon_vigente(c) and en_segmento(consultorio, c.segmento, celular)
+        if c.pk not in usados
+        and cupon_vigente(c)
+        and ((seguidor and c.segmento == Segmento.TODOS) or en_segmento(consultorio, c.segmento, celular))
     ]
 
 

@@ -580,6 +580,8 @@ void main() {
       await abrirHoy(t, red, AlmacenMemoria()..datos[claveRenovacion] = 'r1');
       await t.tap(find.byIcon(Icons.settings_outlined));
       await t.pumpAndSettle();
+      await t.ensureVisible(find.text('Tratamientos'));
+      await t.pumpAndSettle();
       await t.tap(find.text('Tratamientos'));
       await t.pumpAndSettle();
       await t.tap(find.text('Endodoncia'));

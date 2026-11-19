@@ -11,6 +11,7 @@ import '../../shared/diseno/notas.dart';
 import '../../shared/diseno/paleta.dart';
 import '../../shared/diseno/vidrio.dart';
 import '../citas/selector_hora.dart';
+import 'cambiar_cita.dart';
 import 'datos_cliente.dart';
 import 'gamificacion.dart';
 import 'mascota.dart';
@@ -24,18 +25,6 @@ class NegocioClientePantalla extends ConsumerWidget {
 
   final String slug;
   final String? fecha;
-
-  Future<void> _silenciar(BuildContext context, WidgetRef ref, bool silenciar) async {
-    try {
-      await ref.read(apiClienteProvider).post('/negocios/$slug/silenciar?silenciar=$silenciar');
-      ref.invalidate(negocioClienteProvider(slug));
-      if (context.mounted) {
-        avisar(context, silenciar ? 'Ya no recibirás sus promociones.' : 'Volverás a recibir sus promociones.');
-      }
-    } on ApiError catch (e) {
-      if (context.mounted) avisar(context, e.mensaje);
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -69,16 +58,6 @@ class NegocioClientePantalla extends ConsumerWidget {
                             onPressed: () => context.canPop() ? context.pop() : context.go('/cliente'),
                           ),
                           const Spacer(),
-                          if (n['es_cliente'] == true)
-                            PopupMenuButton<bool>(
-                              iconColor: Colors.white,
-                              onSelected: (v) => _silenciar(context, ref, v),
-                              itemBuilder: (_) => [
-                                n['silenciado'] == true
-                                    ? const PopupMenuItem(value: false, child: Text('Recibir sus promociones'))
-                                    : const PopupMenuItem(value: true, child: Text('No recibir sus promociones')),
-                              ],
-                            ),
                         ],
                       ),
                       Padding(
@@ -150,6 +129,8 @@ class NegocioClientePantalla extends ConsumerWidget {
                           ),
                       ],
                     ),
+                    const SizedBox(height: 10),
+                    TarjetaSeguir(slug: slug, negocio: n),
                     if (fecha != null) ...[const SizedBox(height: 10), _AvisoDia(fecha: fecha!)],
                     if (tarjeta != null && tarjeta['activa'] == true) ...[
                       const SizedBox(height: 12),
@@ -339,6 +320,8 @@ class _ReservarClienteState extends ConsumerState<ReservarClientePantalla> {
       ref.invalidate(negocioClienteProvider(widget.slug));
       HapticFeedback.mediumImpact();
       if (mounted) setState(() => _hecha = r);
+      // Primera reserva en este lugar: se pregunta una sola vez por sus promociones (permiso aparte, DAT-02).
+      if (r['preguntar_promos'] == true && mounted) await preguntarPromos(context, ref, widget.slug, negocio);
     } on ApiError catch (e) {
       if (!mounted) return;
       avisar(context, e.mensaje);
@@ -408,6 +391,7 @@ class _ReservarClienteState extends ConsumerState<ReservarClientePantalla> {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
+                  AvisoHoy(consulta: (slug: widget.slug, motivo: widget.motivo, profesional: _profesional)),
                   Expanded(
                     child: SelectorHora(
                       key: const Key('paso-hora'),
@@ -654,4 +638,98 @@ class _ReservaHechaState extends State<_ReservaHecha> {
       ),
     );
   }
+}
+
+/// Seguir al lugar y, aparte, recibir sus promociones y cupones con una notificación.
+class TarjetaSeguir extends ConsumerWidget {
+  const TarjetaSeguir({super.key, required this.slug, required this.negocio});
+
+  final String slug;
+  final Json negocio;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final siguiendo = negocio['siguiendo'] == true;
+    final promos = negocio['promos'] == true;
+    final tonos = context.tonos;
+    return Container(
+      key: const Key('tarjeta-seguir'),
+      decoration: BoxDecoration(
+        color: tonos.superficie,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: tonos.borde),
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            leading: Icon(siguiendo ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: tonos.acento),
+            title: Text(siguiendo ? 'Sigues a este lugar' : 'Seguir a este lugar'),
+            subtitle: const Text('Aparece en tu inicio y te enteras de sus novedades.'),
+            trailing: siguiendo
+                ? TextButton(
+                    onPressed: () => seguirNegocio(context, ref, slug, seguir: false),
+                    child: const Text('Dejar'),
+                  )
+                : FilledButton(
+                    key: const Key('boton-seguir'),
+                    onPressed: () => seguirNegocio(context, ref, slug, seguir: true, promos: true),
+                    child: const Text('Seguir'),
+                  ),
+          ),
+          if (siguiendo)
+            SwitchListTile(
+              key: const Key('switch-promos'),
+              value: promos,
+              onChanged: (v) => seguirNegocio(context, ref, slug, seguir: true, promos: v),
+              title: const Text('Recibir sus promociones y cupones'),
+              subtitle: const Text('Te llegan como notificación y quedan en «Beneficios».'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<void> seguirNegocio(
+  BuildContext context,
+  WidgetRef ref,
+  String slug, {
+  required bool seguir,
+  bool? promos,
+}) async {
+  try {
+    final r = await ref.read(apiClienteProvider).post('/negocios/$slug/seguir', {'seguir': seguir, 'promos': ?promos});
+    ref.invalidate(negocioClienteProvider(slug));
+    refrescarCliente(ref);
+    if (!context.mounted) return;
+    avisar(
+      context,
+      r['siguiendo'] != true
+          ? 'Ya no sigues a este lugar.'
+          : r['promos'] == true
+          ? 'Listo: te avisaremos de sus promociones y cupones.'
+          : 'Listo: no recibirás sus promociones.',
+    );
+  } on ApiError catch (e) {
+    if (context.mounted) avisar(context, e.mensaje);
+  }
+}
+
+/// Después de la primera reserva en un lugar: «¿Quieres recibir sus promociones?».
+Future<void> preguntarPromos(BuildContext context, WidgetRef ref, String slug, Json negocio) async {
+  final quiere = await showDialog<bool>(
+    context: context,
+    builder: (dialogo) => AlertDialog(
+      title: Text('¿Quieres recibir las promociones de ${negocio['nombre']}?'),
+      content: const Text(
+        'Te llegarán sus descuentos y cupones con una notificación. Puedes apagarlo cuando quieras en su ficha.',
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogo, false), child: const Text('No, gracias')),
+        FilledButton(onPressed: () => Navigator.pop(dialogo, true), child: const Text('Sí, quiero')),
+      ],
+    ),
+  );
+  if (quiere == null || !context.mounted) return;
+  await seguirNegocio(context, ref, slug, seguir: true, promos: quiere);
 }

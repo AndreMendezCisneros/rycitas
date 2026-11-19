@@ -352,6 +352,7 @@ void main() {
     await t.tap(find.text('Beneficios'));
     await t.pumpAndSettle();
     expect(find.byKey(const Key('cupon-GLOW20')), findsOneWidget);
+    await t.scrollUntilVisible(find.byKey(const Key('tarjeta-sellos')), 200, scrollable: find.byType(Scrollable).first);
     expect(find.byKey(const Key('tarjeta-sellos')), findsOneWidget);
     expect(find.byKey(const Key('seccion-logros')), findsOneWidget);
     expect(find.byKey(const Key('logro-primera')), findsOneWidget);
@@ -467,6 +468,108 @@ void main() {
     await _abrir(t, red, AlmacenMemoria()..datos[claveRenovacion] = 'r1');
     expect(find.text('Quiero reservar'), findsNothing);
     expect(find.textContaining('Luis Rojas'), findsWidgets);
+  });
+
+  Map<String, dynamic> proxima({bool puedeCambiar = true}) => {
+    ..._pasada(5, 'programada', 'glowclinic', 'Glow Clinic', '2030-03-10T10:00:00-05:00'),
+    'estado_texto': 'Confirmada',
+    'motivo': 'hydrafacial',
+    'profesional_id': 1,
+    'puede_cambiar': puedeCambiar,
+    'cambia_hasta': '2030-03-10T06:00:00-05:00',
+  };
+
+  testWidgets('el cliente cancela su cita desde el detalle', (t) async {
+    final red = RedFalsa({
+      ..._rutasCliente(),
+      'GET /mis-citas': (_) => ok({
+        'proximas': [proxima()],
+        'pasadas': [],
+      }),
+      'POST /mis-citas/5/cancelar': (_) => ok({...proxima(), 'estado': 'cancelada'}),
+    });
+    await _abrir(t, red, _conSesionCliente());
+    await t.tap(find.text('Mis citas'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('proxima-5')).last);
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('cliente-reprogramar')), findsOneWidget);
+    expect(find.textContaining('Puedes cancelarla o moverla hasta'), findsOneWidget);
+    await t.tap(find.byKey(const Key('cliente-cancelar')));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Cancelar cita'));
+    await t.pumpAndSettle();
+    expect(red.llamadas, contains('POST /mis-citas/5/cancelar'));
+  });
+
+  testWidgets('fuera de plazo no deja cambiarla y explica que escriba por WhatsApp', (t) async {
+    final red = RedFalsa({
+      ..._rutasCliente(),
+      'GET /mis-citas': (_) => ok({
+        'proximas': [proxima(puedeCambiar: false)],
+        'pasadas': [],
+      }),
+    });
+    await _abrir(t, red, _conSesionCliente());
+    await t.tap(find.text('Mis citas'));
+    await t.pumpAndSettle();
+    await t.tap(find.byKey(const Key('proxima-5')).last);
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('cliente-cancelar')), findsNothing);
+    expect(find.byKey(const Key('fuera-de-plazo')), findsOneWidget);
+  });
+
+  testWidgets('«¿Cómo funciona?» explica sellos, cupones, racha y nivel', (t) async {
+    await _abrir(t, RedFalsa(_rutasCliente()), _conSesionCliente());
+    await t.tap(find.text('Beneficios'));
+    await t.pumpAndSettle();
+    expect(find.textContaining('puntos'), findsNothing);
+    await t.tap(find.byKey(const Key('abrir-como-funciona')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('como-funciona')), findsOneWidget);
+    expect(find.text('Tarjeta de sellos'), findsWidgets);
+    await t.scrollUntilVisible(
+      find.text('Racha'),
+      200,
+      scrollable: find.descendant(of: find.byKey(const Key('como-funciona')), matching: find.byType(Scrollable)),
+    );
+    expect(find.text('Racha'), findsOneWidget);
+  });
+
+  testWidgets('si hoy no quedan horas por la anticipación, lo dice', (t) async {
+    final red = RedFalsa({
+      ..._rutasCliente(),
+      'GET /negocios/glowclinic': (_) => ok({
+        ..._ficha,
+        'opciones': {'elegir_profesional': false},
+        'siguiendo': true,
+        'promos': false,
+      }),
+      'GET /negocios/glowclinic/disponibilidad': (_) => ok({
+        'dias': [
+          {
+            'fecha': '2030-03-11',
+            'horas': ['2030-03-11T10:00:00-05:00'],
+          },
+        ],
+        'motivo_hoy': 'anticipacion',
+        'anticipacion_horas': 2,
+        'whatsapp': '51911111111',
+      }),
+    });
+    await _abrir(t, red, _conSesionCliente());
+    await t.tap(find.byKey(const Key('negocio-glowclinic')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('switch-promos')), findsOneWidget);
+    await t.scrollUntilVisible(
+      find.byKey(const Key('servicio-hydrafacial')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await t.tap(find.byKey(const Key('servicio-hydrafacial')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const Key('aviso-hoy')), findsOneWidget);
+    expect(find.textContaining('al menos 2 h de anticipación'), findsOneWidget);
   });
 
   testWidgets('capturas del modo cliente', (t) async {

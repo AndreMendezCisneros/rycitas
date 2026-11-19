@@ -109,10 +109,17 @@ def disponibilidad(
     tratamiento = get_object_or_404(Tratamiento, consultorio=consultorio, slug=motivo, reservable=True)
     if not consultorio.opciones_efectivas["elegir_profesional"]:
         profesional = None
-    resultado = servicios.consultar_disponibilidad(
-        consultorio, tratamiento, desde or timezone.localdate(), dias, profesional_id=profesional
-    )
-    return {"dias": _serie_disponibilidad(resultado)}
+    desde = desde or timezone.localdate()
+    resultado = servicios.consultar_disponibilidad(consultorio, tratamiento, desde, dias, profesional_id=profesional)
+    hoy = timezone.localdate()
+    return {
+        "dias": _serie_disponibilidad(resultado),
+        # Por qué hoy no tiene horas («anticipacion», «cerrado», «lleno»), para explicarlo en la reserva.
+        "motivo_hoy": servicios.motivo_sin_horas_hoy(consultorio, tratamiento, profesional)
+        if desde <= hoy and hoy not in resultado
+        else None,
+        "anticipacion_horas": consultorio.reglas_efectivas["anticipacion_min_horas"],
+    }
 
 
 @router.post("/{slug}/reservas", response={201: dict})

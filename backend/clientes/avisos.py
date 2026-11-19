@@ -32,12 +32,13 @@ CANAL_CITAS = "mis_citas_v1"
 
 
 def de_cita(cita, tipo: str) -> None:
-    """Aviso al cliente cuando el negocio confirma, rechaza, cancela o mueve su cita."""
+    """Aviso al cliente cuando el negocio le reserva, confirma, rechaza, cancela o mueve su cita."""
     from citas.servicios import fecha_legible
 
     negocio = cita.consultorio.nombre
     cuando = fecha_legible(cita.inicio)
     titulo, cuerpo = {
+        "reservada": (f"{negocio} te reservó una cita ✨", f"{cuando[:1].upper()}{cuando[1:]}. Toca para ver los detalles."),
         "confirmada": ("¡Tu cita está confirmada! 🎉", f"{negocio} te espera {cuando}."),
         "rechazada": ("No pudieron confirmar tu reserva", f"{negocio} no tiene ese horario. Toca para elegir otro."),
         "cancelada": ("Tu cita fue cancelada", f"{negocio} canceló tu cita de {cuando}."),

@@ -179,6 +179,44 @@ def _turno_de_agenda(consultorio_id: int) -> None:
         cursor.execute("SELECT pg_advisory_xact_lock(%s, %s)", [LLAVE_AGENDA, consultorio_id])
 
 
+def redondear_al_paso(dt: datetime, paso_min: int) -> datetime:
+    """La próxima hora redonda del paso en Lima: 12:07:33 → 12:15 (con paso de 15)."""
+    local = dt.astimezone(LIMA)
+    medianoche = local.replace(hour=0, minute=0, second=0, microsecond=0)
+    paso = max(1, paso_min) * 60
+    segundos = (local - medianoche).total_seconds()
+    return medianoche + timedelta(seconds=-(-segundos // paso) * paso)
+
+
+def motivo_sin_horas_hoy(
+    consultorio: Consultorio, tratamiento: Tratamiento, profesional_id: int | None = None
+) -> str | None:
+    """Por qué hoy no aparece en la disponibilidad del cliente, para decírselo en vez de solo «no hay horas».
+
+    «anticipacion»: habría horas, pero falta menos que la anticipación mínima. «cerrado»: hoy no atiende o ya cerró.
+    «lleno»: todo lo que queda está ocupado. None: hoy sí hay horas.
+    """
+    from dataclasses import replace
+
+    ahora = timezone.now()
+    hoy = timezone.localdate()
+    params = parametros_de(consultorio, tratamiento)
+    sin_anticipacion = replace(params, anticipacion_min_horas=0)
+    candidatos = profesionales_para(consultorio, tratamiento, profesional_id)
+    abierto_aun = False
+    for p in candidatos:
+        tramos = tramos_de(consultorio, p)
+        ocupados = ocupados_de(consultorio, _inicio_de_dia(hoy), _inicio_de_dia(hoy + timedelta(days=1)), ahora, profesional=p)
+        if horas_libres(hoy, tramos, ocupados, params, ahora):
+            return None
+        if horas_libres(hoy, tramos, ocupados, sin_anticipacion, ahora):
+            return "anticipacion"
+        cierre = max((t.fin for t in tramos if t.dia_semana == hoy.weekday()), default=None)
+        if cierre is not None and datetime.combine(hoy, cierre, LIMA) > ahora:
+            abierto_aun = True
+    return "lleno" if abierto_aun else "cerrado"
+
+
 def _exigir_hora_libre(
     consultorio: Consultorio,
     tratamiento: Tratamiento,
@@ -609,8 +647,13 @@ def crear_cita_doctor(
     celular: str,
     profesional_id: int | None = None,
     notas: str = "",
+    vincular_app: bool = False,
 ) -> Cita:
-    """Cita por teléfono (RF-23): sin verificación, pero con las mismas horas libres que la web."""
+    """Cita por teléfono (RF-23): sin verificación, pero con las mismas horas libres que la web.
+
+    [vincular_app]: el negocio confirmó que la cuenta de la app con ese número es de esta persona. La cita queda en
+    su app al instante y le llega el aviso.
+    """
     nombre = _validar_nombre(nombre)
     celular = normalizar_celular(celular)
     candidatos = profesionales_para(consultorio, tratamiento, profesional_id)
@@ -646,6 +689,45 @@ def crear_cita_doctor(
         except IntegrityError as error:
             raise _horario_tomado() from error
         _evento(cita, "estado", "", Estado.PROGRAMADA, usuario)
+        if vincular_app:
+            _vincular_con_app(cita, usuario, "reservada")
+    return cita
+
+
+def cuenta_de_app(celular: str):
+    """La cuenta de la app con ese número, si hay exactamente una activa (con dos, no se adivina cuál es)."""
+    from clientes.models import Cliente
+
+    cuentas = list(Cliente.objects.filter(celular=celular, activo=True)[:2])
+    return cuentas[0] if len(cuentas) == 1 else None
+
+
+def _vincular_con_app(cita: Cita, usuario: Usuario | None, aviso: str | None) -> bool:
+    """El negocio da fe de que la cuenta es de esta persona: la cita pasa a su app y su número queda probado."""
+    from clientes import avisos
+
+    cuenta = cuenta_de_app(cita.paciente.celular)
+    if cuenta is None:
+        return False
+    cita.cliente = cuenta
+    cita.save(update_fields=["cliente"])
+    if cuenta.celular_verificado_en is None:
+        cuenta.celular_verificado_en = timezone.now()
+        cuenta.save(update_fields=["celular_verificado_en"])
+    _evento(cita, "vinculada_app", "", str(cuenta.pk), usuario)
+    if aviso:
+        avisos.de_cita(cita, aviso)
+    return True
+
+
+def vincular_cita_con_app(consultorio: Consultorio, usuario: Usuario, cita_id: int) -> Cita:
+    """Para una cita que ya existía: «Vincular con su app» desde el detalle."""
+    with transaction.atomic():
+        cita = _bloquear_cita(consultorio, cita_id, usuario)
+        if cita.estado not in (Estado.POR_APROBAR, Estado.PROGRAMADA, Estado.EN_CURSO):
+            raise ErrorNegocio("transicion_invalida", "Solo se vinculan citas que aún no pasan.", 409, estado=cita.estado)
+        if not _vincular_con_app(cita, usuario, "reservada"):
+            raise ErrorNegocio("sin_cuenta", "Ese número no tiene una cuenta en la app.", 404)
     return cita
 
 
@@ -846,6 +928,88 @@ def reprogramar_por_doctor(consultorio: Consultorio, usuario: Usuario, cita_id: 
         from clientes import avisos
 
         avisos.de_cita(cita, "movida")
+    return cita
+
+
+# --- Acciones del cliente desde su app -------------------------------------------------------------------------
+
+
+def citas_de_la_cuenta(cliente):
+    """Lo que reservó desde la app (o el negocio le vinculó) y, si probó su WhatsApp, todo lo de su número."""
+    mias = Q(cliente=cliente)
+    if cliente.celular_verificado_en is not None:
+        mias |= Q(paciente__celular=cliente.celular)
+    return Cita.objects.filter(mias, consultorio__activo=True)
+
+
+def cambia_hasta(cita: Cita) -> datetime:
+    """Hasta cuándo el cliente puede cancelar o mover la cita por su cuenta."""
+    return cita.inicio - timedelta(hours=cita.consultorio.reglas_efectivas["limite_cancelacion_horas"])
+
+
+def puede_cambiar_cliente(cita: Cita) -> bool:
+    if cita.estado == Estado.POR_APROBAR:
+        return cita.inicio > timezone.now()
+    return cita.estado == Estado.PROGRAMADA and timezone.now() <= cambia_hasta(cita)
+
+
+def _cita_del_cliente(cliente, cita_id: int) -> Cita:
+    cita = (
+        citas_de_la_cuenta(cliente)
+        .select_for_update(of=("self",))
+        .select_related("paciente", "tratamiento", "consultorio", "profesional")
+        .filter(pk=cita_id)
+        .first()
+    )
+    if cita is None:
+        raise ErrorNegocio("no_encontrada", "No encontramos esa cita.", 404)
+    if cita.estado not in (Estado.POR_APROBAR, Estado.PROGRAMADA):
+        raise ErrorNegocio("transicion_invalida", "Esta cita ya no se puede cambiar.", 409, estado=cita.estado)
+    if not puede_cambiar_cliente(cita):
+        horas = cita.consultorio.reglas_efectivas["limite_cancelacion_horas"]
+        raise ErrorNegocio(
+            "fuera_de_plazo",
+            f"Solo puedes cambiarla hasta {horas} h antes. Escríbele al negocio por WhatsApp.",
+            409,
+            whatsapp_url=url_whatsapp(cita.consultorio.whatsapp, f"Hola, quiero cambiar mi cita del {_formato_fecha(cita.inicio)}."),
+        )
+    return cita
+
+
+def _avisar_negocio_cambio(cita: Cita, titulo: str, tipo: str) -> None:
+    """Sin nombre ni servicio (DAT-05), igual que el aviso de reserva nueva. La clave es única: puede moverla dos veces."""
+    cuerpo = _formato_fecha(cita.inicio)
+    datos = {"tipo": tipo, "cita_id": str(cita.pk)}
+    consultorio_id, profesional_id = cita.consultorio_id, cita.profesional_id
+    transaction.on_commit(
+        lambda: push.encolar(consultorio_id, titulo, cuerpo, datos, profesional_id=profesional_id)
+    )
+
+
+def cancelar_por_cliente(cliente, cita_id: int) -> Cita:
+    with transaction.atomic():
+        cita = _cita_del_cliente(cliente, cita_id)
+        _cambiar_estado(cita, Estado.CANCELADA)
+        _evento(cita, "cancelada_por", "", "cliente")
+        _avisar_negocio_cambio(cita, "Un cliente canceló su cita", "cancelada_cliente")
+    return cita
+
+
+def reprogramar_por_cliente(cliente, cita_id: int, inicio: datetime) -> Cita:
+    """La nueva hora pasa por las mismas reglas que una reserva (anticipación, horario) y queda por confirmar."""
+    with transaction.atomic():
+        cita = _cita_del_cliente(cliente, cita_id)
+        _turno_de_agenda(cita.consultorio_id)
+        params = _exigir_hora_libre(
+            cita.consultorio, cita.tratamiento, inicio, excluir_cita=cita.pk, profesional=cita.profesional
+        )
+        _mover(cita, inicio, params, None)
+        if cita.estado == Estado.PROGRAMADA:
+            # Fuera de TRANSICIONES a propósito: solo el cliente, al elegir otra hora, devuelve la cita a revisión.
+            cita.estado = Estado.POR_APROBAR
+            cita.save(update_fields=["estado"])
+            _evento(cita, "estado", Estado.PROGRAMADA, Estado.POR_APROBAR)
+        _avisar_negocio_cambio(cita, "Un cliente cambió su cita: confírmala", "por_aprobar")
     return cita
 
 

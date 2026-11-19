@@ -28,10 +28,15 @@ final negocioClienteProvider = FutureProvider.autoDispose.family<Json, String>(
 
 typedef ConsultaCliente = ({String slug, String motivo, int? profesional});
 
-final horasClienteProvider = FutureProvider.autoDispose.family<List<DiaLibre>, ConsultaCliente>((ref, c) async {
-  final datos = await ref
+/// La respuesta completa: días con horas y, si hoy no tiene, por qué (`motivo_hoy`).
+final disponibilidadClienteProvider = FutureProvider.autoDispose.family<Json, ConsultaCliente>(
+  (ref, c) => ref
       .read(apiClienteProvider)
-      .get('/negocios/${c.slug}/disponibilidad', params: {'motivo': c.motivo, 'profesional': ?c.profesional});
+      .get('/negocios/${c.slug}/disponibilidad', params: {'motivo': c.motivo, 'profesional': ?c.profesional}),
+);
+
+final horasClienteProvider = FutureProvider.autoDispose.family<List<DiaLibre>, ConsultaCliente>((ref, c) async {
+  final datos = await ref.watch(disponibilidadClienteProvider(c).future);
   return lista(datos['dias']).map(DiaLibre.fromJson).toList();
 });
 
@@ -39,7 +44,7 @@ final misCitasProvider = FutureProvider.autoDispose<Json>((ref) => ref.read(apiC
 
 final beneficiosProvider = FutureProvider.autoDispose<Json>((ref) => ref.read(apiClienteProvider).get('/beneficios'));
 
-/// Logros, racha, puntos y nivel global.
+/// Logros, racha y nivel global.
 final logrosProvider = FutureProvider.autoDispose<Json>((ref) => ref.read(apiClienteProvider).get('/logros'));
 
 /// Tras reservar, canjear o cambiar algo: todo lo que depende de las citas y los sellos se vuelve a pedir.

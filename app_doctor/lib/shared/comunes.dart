@@ -26,14 +26,21 @@ Future<void> ofrecerAviso(
   String titulo,
   String? url, {
   List<Siguiente> siguientes = const [],
+  bool enSuApp = false,
 }) async {
   if (siguientes.isNotEmpty) return _avisosTrasHueco(context, titulo, url, siguientes);
   if (url == null) return;
+  final cliente = vocDe(context).cliente;
   final avisarAhora = await showDialog<bool>(
     context: context,
     builder: (dialogo) => AlertDialog(
       title: Text(titulo),
-      content: Text('¿Quieres avisarle al ${vocDe(context).cliente} por WhatsApp? El mensaje ya está escrito.'),
+      content: Text(
+        enSuApp
+            ? 'Ya le llegó la notificación a su app y la cita aparece en «Mis citas». '
+                  '¿Quieres avisarle también por WhatsApp?'
+            : '¿Quieres avisarle al $cliente por WhatsApp? El mensaje ya está escrito.',
+      ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(dialogo, false), child: const Text('Ahora no')),
         FilledButton(onPressed: () => Navigator.pop(dialogo, true), child: const Text('Avisar')),

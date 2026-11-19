@@ -43,8 +43,8 @@ def test_perfil_solo_muestra_tratamientos_visibles_y_motivos_reservables(cliente
 
 
 def test_disponibilidad_respeta_anticipacion_y_horario(cliente, limpieza):
-    horas = horas_del(disponibilidad(cliente), HOY)  # 8:00 + 2 h
-    assert horas[0] == "10:00"
+    horas = horas_del(disponibilidad(cliente), HOY)  # 8:00 + 1 h
+    assert horas[0] == "09:00"
     assert horas[-1] == "12:30"
 
 
@@ -60,7 +60,7 @@ def test_cambio_de_horario_se_ve_al_instante(cliente, consultorio, limpieza):
 
 
 def test_bloqueo_quita_las_horas(cliente, consultorio, limpieza):
-    Bloqueo.objects.create(consultorio=consultorio, inicio=AHORA.replace(hour=10), fin=AHORA.replace(hour=13))
+    Bloqueo.objects.create(consultorio=consultorio, inicio=AHORA.replace(hour=9), fin=AHORA.replace(hour=13))
     assert horas_del(disponibilidad(cliente), HOY) == []
 
 
@@ -107,7 +107,7 @@ def test_exige_nombre(cliente, limpieza):
 @pytest.mark.parametrize(
     "inicio",
     [
-        AHORA.replace(hour=9),  # menos de 2 h de anticipación
+        AHORA.replace(hour=8, minute=45),  # menos de 1 h de anticipación
         AHORA.replace(hour=14),  # fuera del horario
         AHORA.replace(hour=12, minute=45),  # no cabe antes del cierre
         AHORA.replace(hour=10, minute=7),  # fuera de la grilla

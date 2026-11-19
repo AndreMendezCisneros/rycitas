@@ -12,6 +12,8 @@ import '../../shared/diseno/movimiento.dart';
 import '../../shared/diseno/notas.dart';
 import '../../shared/diseno/paleta.dart';
 import '../../shared/diseno/vidrio.dart';
+import 'cambiar_cita.dart';
+import 'como_funciona.dart';
 import 'datos_cliente.dart';
 import 'gamificacion.dart';
 import 'inicio_cliente.dart';
@@ -21,7 +23,7 @@ import 'widgets_cliente.dart';
 import '../../shared/diseno/tonos.dart';
 
 /// «Mis citas»: Próximas, Historial (todas las anteriores, de 20 en 20) y Calendario. Tocar una cita abre sus
-/// detalles en una hoja flotante. Cancelar o mover lo hace el negocio: se le escribe.
+/// detalles en una hoja flotante, donde se puede cancelar o mover hasta el plazo del negocio; después, se le escribe.
 class MisCitasPantalla extends ConsumerStatefulWidget {
   const MisCitasPantalla({super.key, this.citaInicial});
 
@@ -636,19 +638,21 @@ class _CitaCliente extends StatelessWidget {
 Future<void> mostrarDetalleCita(BuildContext context, Json cita) =>
     mostrarHojaVidrio<void>(context, builder: (_) => DetalleCitaCliente(cita: cita));
 
-class DetalleCitaCliente extends StatelessWidget {
+class DetalleCitaCliente extends ConsumerWidget {
   const DetalleCitaCliente({super.key, required this.cita});
 
   final Json cita;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final negocio = cita['negocio'] as Json;
     final lugar = cita['consultorio'] as Json;
     final cupon = cita['cupon'] as Json?;
     final whatsapp = lugar['whatsapp'] as String? ?? '';
     final activa = proximaActiva(cita);
     final notas = (cita['notas'] as String? ?? '').trim();
+    final puedeCambiar = cita['puede_cambiar'] == true;
+    final cambiaHasta = cita['cambia_hasta'] as String?;
     final textos = Theme.of(context).textTheme;
     final fecha = DateFormat("EEEE d 'de' MMMM", 'es').format(Fechas.enLima(cita['inicio'] as String));
     final texto =
@@ -720,6 +724,55 @@ class DetalleCitaCliente extends StatelessWidget {
               style: TextStyle(color: context.tonos.ambarTexto, fontWeight: FontWeight.w600),
             ),
           ),
+        if (puedeCambiar) ...[
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('cliente-reprogramar'),
+                  icon: const Icon(Icons.schedule_rounded),
+                  label: const Text('Reprogramar'),
+                  onPressed: () async {
+                    final navegador = Navigator.of(context);
+                    if (await reprogramarCitaCliente(context, ref, cita)) navegador.maybePop();
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('cliente-cancelar'),
+                  style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+                  icon: const Icon(Icons.event_busy_rounded),
+                  label: const Text('Cancelar'),
+                  onPressed: () async {
+                    final navegador = Navigator.of(context);
+                    if (await cancelarCitaCliente(context, ref, cita)) navegador.maybePop();
+                  },
+                ),
+              ),
+            ],
+          ),
+          if (cita['estado'] == 'programada' && cambiaHasta != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, bottom: 4),
+              child: Text(
+                'Puedes cancelarla o moverla hasta el ${Fechas.diaHora(cambiaHasta)}.',
+                style: textos.bodySmall?.copyWith(color: context.tonos.textoSuave),
+              ),
+            ),
+          const SizedBox(height: 10),
+        ] else if (activa && cita['estado'] == 'programada')
+          Container(
+            key: const Key('fuera-de-plazo'),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: context.tonos.rosa, borderRadius: BorderRadius.circular(14)),
+            child: Text(
+              'Ya no puedes cambiarla desde la app. Si necesitas cancelar o moverla, escríbele al lugar por WhatsApp.',
+              style: TextStyle(color: context.tonos.acentoFuerte, fontWeight: FontWeight.w600),
+            ),
+          ),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -781,7 +834,17 @@ class BeneficiosPantalla extends ConsumerWidget {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   children: [
-                    Text('Beneficios', style: Theme.of(context).textTheme.headlineMedium),
+                    Row(
+                      children: [
+                        Expanded(child: Text('Beneficios', style: Theme.of(context).textTheme.headlineMedium)),
+                        TextButton.icon(
+                          key: const Key('abrir-como-funciona'),
+                          onPressed: () => mostrarComoFunciona(context),
+                          icon: const Icon(Icons.help_outline_rounded),
+                          label: const Text('¿Cómo funciona?'),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 14),
                     const TarjetaProgreso(),
                     const SizedBox(height: 18),

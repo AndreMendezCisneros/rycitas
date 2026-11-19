@@ -1,7 +1,8 @@
 """API de la app del cliente («Quiero reservar»): /cliente/v1.
 
-Reutiliza la disponibilidad y la reserva web: la cita queda «por confirmar» y solo el negocio confirma, cancela o
-mueve. El cliente no cancela desde la app: escribe al negocio por WhatsApp.
+Reutiliza la disponibilidad y la reserva web: la cita queda «por confirmar» y solo el negocio la confirma. El cliente
+cancela o mueve su cita desde la app hasta `limite_cancelacion_horas` antes; después, escribe al negocio por WhatsApp.
+Al moverla, la nueva hora vuelve a quedar por confirmar.
 """
 
 import hmac
@@ -19,7 +20,7 @@ from agenda.models import Tratamiento
 from citas import presentacion, servicios
 from citas.models import Cita, Estado, Paciente
 from clientes import autenticacion, fidelidad, logros as gamificacion
-from clientes.models import Cliente, Cupon, CuponUsado, DispositivoCliente
+from clientes.models import Cliente, Cupon, CuponUsado, DispositivoCliente, Seguimiento
 from consultorios.models import Consultorio
 from consultorios.rubros import RUBRO_CHOICES
 from denticita.errores import ErrorNegocio
@@ -73,6 +74,15 @@ class ReservaEntrada(Schema):
     profesional: int | None = None
     cupon: int | None = None
     notas: str = ""
+
+
+class MoverEntrada(Schema):
+    inicio: datetime
+
+
+class SeguirEntrada(Schema):
+    seguir: bool = True
+    promos: bool | None = None  # None: no lo cambia
 
 
 class VincularEntrada(Schema):
@@ -276,7 +286,7 @@ def _negocio_resumen(c: Consultorio, celular: str | None = None) -> dict:
                 "sellos": tarjeta["sellos"],
                 "meta": tarjeta["meta"],
                 "nivel": tarjeta["nivel"]["nombre"],
-                "cupones": len(fidelidad.cupones_para(c, celular)),
+                "cupones": len(fidelidad.cupones_para(c, celular, seguidor=True)),
                 "silenciado": request_silenciado(c, celular),
             }
         )
@@ -288,17 +298,26 @@ def request_silenciado(c: Consultorio, celular: str) -> bool:
 
 
 def _mis_consultorios(cliente: Cliente):
-    if not _celular_confiable(cliente):
-        return _publicados().none()
-    ids = Paciente.objects.filter(celular=cliente.celular).values("consultorio_id")
-    return _publicados().filter(pk__in=ids)
+    """Donde reservó (o el negocio le vinculó una cita) y los que sigue. Por número, solo si probó su WhatsApp."""
+    filtro = Q(pk__in=Cita.objects.filter(cliente=cliente).values("consultorio_id")) | Q(
+        pk__in=Seguimiento.objects.filter(cliente=cliente).values("consultorio_id")
+    )
+    if _celular_confiable(cliente):
+        filtro |= Q(pk__in=Paciente.objects.filter(celular=cliente.celular).values("consultorio_id"))
+    return _publicados().filter(filtro)
+
+
+def _seguimiento(cliente: Cliente, c: Consultorio) -> Seguimiento | None:
+    return Seguimiento.objects.filter(cliente=cliente, consultorio=c).first()
 
 
 @router.get("/mis-negocios")
 def mis_negocios(request):
     cliente = request.auth
-    negocios = [_negocio_resumen(c, cliente.celular) for c in _mis_consultorios(cliente)]
-    negocios.sort(key=lambda n: n["ultima_cita"] or "", reverse=True)
+    # Sellos y última cita salen del número: sin WhatsApp probado podrían ser de otra persona.
+    celular = cliente.celular if _celular_confiable(cliente) else None
+    negocios = [_negocio_resumen(c, celular) for c in _mis_consultorios(cliente)]
+    negocios.sort(key=lambda n: n.get("ultima_cita") or "", reverse=True)
     return {"negocios": negocios, "celular_verificado": _celular_confiable(cliente)}
 
 
@@ -325,16 +344,46 @@ def negocio(request, slug: str):
     c = _negocio(slug)
     cliente = request.auth
     es_cliente = _mis_consultorios(cliente).filter(pk=c.pk).exists()
+    confiable = _celular_confiable(cliente)
+    seguimiento = _seguimiento(cliente, c)
+    con_datos = es_cliente and confiable
     return {
         **presentacion.perfil_publico(c),
         "rubro_nombre": NOMBRE_RUBRO.get(c.rubro, c.rubro),
         "es_cliente": es_cliente,
-        "tarjeta": fidelidad.tarjeta(c, cliente.celular) if es_cliente else None,
-        "cupones": [fidelidad.cupon_publico(x) for x in fidelidad.cupones_para(c, cliente.celular)]
-        if es_cliente
+        "tarjeta": fidelidad.tarjeta(c, cliente.celular) if con_datos else None,
+        "cupones": [
+            fidelidad.cupon_publico(x)
+            for x in fidelidad.cupones_para(c, cliente.celular, seguidor=seguimiento is not None)
+        ]
+        if con_datos
         else [],
         "silenciado": request_silenciado(c, cliente.celular) if es_cliente else False,
+        "siguiendo": seguimiento is not None,
+        "promos": bool(seguimiento and seguimiento.promos and not request_silenciado(c, cliente.celular)),
+        # La app pregunta una sola vez si quiere sus promociones: al reservar ahí por primera vez.
+        "preguntar_promos": seguimiento is None,
     }
+
+
+@router.post("/negocios/{slug}/seguir")
+def seguir(request, slug: str, datos: SeguirEntrada):
+    """Seguir al negocio y, aparte, dar o quitar el permiso de recibir sus promociones (DAT-02)."""
+    c = _negocio(slug)
+    cliente = request.auth
+    if not datos.seguir:
+        Seguimiento.objects.filter(cliente=cliente, consultorio=c).delete()
+        cliente.silenciados.add(c)
+        return {"siguiendo": False, "promos": False}
+    seguimiento, _ = Seguimiento.objects.get_or_create(cliente=cliente, consultorio=c)
+    if datos.promos is not None and seguimiento.promos != datos.promos:
+        seguimiento.promos = datos.promos
+        seguimiento.save(update_fields=["promos"])
+    if seguimiento.promos:
+        cliente.silenciados.remove(c)
+    else:
+        cliente.silenciados.add(c)
+    return {"siguiendo": True, "promos": seguimiento.promos}
 
 
 @router.get("/negocios/{slug}/disponibilidad")
@@ -345,13 +394,19 @@ def disponibilidad(request, slug: str, motivo: str, desde: date | None = None, d
     tratamiento = get_object_or_404(Tratamiento, consultorio=c, slug=motivo, reservable=True)
     if not c.opciones_efectivas["elegir_profesional"]:
         profesional = None
-    resultado = servicios.consultar_disponibilidad(
-        c, tratamiento, desde or timezone.localdate(), min(max(dias, 1), 60), profesional_id=profesional
-    )
+    desde = desde or timezone.localdate()
+    resultado = servicios.consultar_disponibilidad(c, tratamiento, desde, min(max(dias, 1), 60), profesional_id=profesional)
+    hoy = timezone.localdate()
     return {
         "dias": [
             {"fecha": fecha.isoformat(), "horas": [presentacion.iso(h) for h in horas]} for fecha, horas in resultado.items()
-        ]
+        ],
+        # Por qué hoy no aparece: la app lo explica en vez de solo mostrar el día siguiente.
+        "motivo_hoy": servicios.motivo_sin_horas_hoy(c, tratamiento, profesional)
+        if desde <= hoy and hoy not in resultado
+        else None,
+        "anticipacion_horas": c.reglas_efectivas["anticipacion_min_horas"],
+        "whatsapp": c.whatsapp,
     }
 
 
@@ -369,7 +424,10 @@ def reservar(request, slug: str, datos: ReservaEntrada):
     if datos.cupon is not None:
         if not _celular_confiable(cliente):
             raise ErrorNegocio("cupon_invalido", "Ese cupón ya no está disponible.", 409)
-        cupon = next((x for x in fidelidad.cupones_para(c, cliente.celular) if x.pk == datos.cupon), None)
+        seguidor = Seguimiento.objects.filter(cliente=cliente, consultorio=c).exists()
+        cupon = next(
+            (x for x in fidelidad.cupones_para(c, cliente.celular, seguidor=seguidor) if x.pk == datos.cupon), None
+        )
         if cupon is None:
             raise ErrorNegocio("cupon_invalido", "Ese cupón ya no está disponible.", 409)
         if cupon.tratamiento_id and cupon.tratamiento_id != tratamiento.pk:
@@ -388,7 +446,12 @@ def reservar(request, slug: str, datos: ReservaEntrada):
         Cita.objects.filter(pk=cita.pk).update(cliente=cliente)
         if cupon is not None:
             CuponUsado.objects.create(cupon=cupon, cita=cita, celular=cliente.celular)
-    return 201, {**presentacion.reserva_creada(cita), "cupon": fidelidad.cupon_publico(cupon) if cupon else None}
+    return 201, {
+        **presentacion.reserva_creada(cita),
+        "cupon": fidelidad.cupon_publico(cupon) if cupon else None,
+        # Primera vez con este negocio: la app pregunta si quiere sus promociones (y lo sigue).
+        "preguntar_promos": not Seguimiento.objects.filter(cliente=cliente, consultorio=c).exists(),
+    }
 
 
 @router.post("/negocios/{slug}/silenciar")
@@ -410,26 +473,43 @@ def _cita_cliente(cita: Cita) -> dict:
     datos.pop("codigo", None)
     datos.pop("whatsapp_url", None)
     cupon = getattr(cita, "cupon_usado", None)  # el acceso inverso sin fila lanza un AttributeError
+    activa = cita.estado in (Estado.POR_APROBAR, Estado.PROGRAMADA)
     return {
         **datos,
         "id": cita.pk,
-        "negocio": {"slug": cita.consultorio.slug, "nombre": cita.consultorio.nombre},
+        "negocio": {"slug": cita.consultorio.slug, "nombre": cita.consultorio.nombre, "whatsapp": cita.consultorio.whatsapp},
         "enlace": f"/c/{cita.token_gestion}/",
         "notas": cita.notas,
         "cupon": fidelidad.cupon_publico(cupon.cupon) if cupon else None,
+        "motivo": cita.tratamiento.slug if cita.tratamiento_id else None,
+        "profesional_id": cita.profesional_id,
+        # Cancelar o mover desde la app: hasta `cambia_hasta`; después, por WhatsApp.
+        "puede_cambiar": activa and servicios.puede_cambiar_cliente(cita),
+        "cambia_hasta": presentacion.iso(servicios.cambia_hasta(cita)) if activa else None,
     }
 
 
 def _citas_del_cliente(cliente: Cliente):
-    # Lo que reservó desde la app lo ve siempre; el resto de citas de su número, cuando probó que el WhatsApp es suyo.
-    mias = Q(cliente=cliente)
-    if _celular_confiable(cliente):
-        mias |= Q(paciente__celular=cliente.celular)
+    # Lo que reservó desde la app (o le vinculó el negocio) lo ve siempre; el resto de su número, con el WhatsApp probado.
     return (
-        Cita.objects.select_related("consultorio", "tratamiento", "profesional", "paciente", "cupon_usado__cupon")
-        .filter(mias, consultorio__activo=True)
+        servicios.citas_de_la_cuenta(cliente)
+        .select_related("consultorio", "tratamiento", "profesional", "paciente", "cupon_usado__cupon")
         .exclude(estado__in=[Estado.PENDIENTE, Estado.EXPIRADA])
     )
+
+
+@router.post("/mis-citas/{cita_id}/cancelar")
+def cancelar_cita(request, cita_id: int):
+    cita = servicios.cancelar_por_cliente(request.auth, cita_id)
+    return _cita_cliente(cita)
+
+
+@router.post("/mis-citas/{cita_id}/reprogramar")
+def reprogramar_cita(request, cita_id: int, datos: MoverEntrada):
+    if datos.inicio.tzinfo is None:
+        raise ErrorNegocio("hora_invalida", "La hora debe incluir zona horaria.", 422)
+    cita = servicios.reprogramar_por_cliente(request.auth, cita_id, datos.inicio)
+    return _cita_cliente(cita)
 
 
 ACTIVOS = [Estado.POR_APROBAR, Estado.PROGRAMADA, Estado.EN_CURSO]
@@ -477,7 +557,7 @@ def historial(request, antes: str = "", negocio: str = ""):
 
 @router.get("/logros")
 def logros(request):
-    """Logros, racha, puntos y nivel: el progreso del cliente en todos sus lugares."""
+    """Logros, racha y nivel: el progreso del cliente en todos sus lugares."""
     return gamificacion.resumen(request.auth, _celular_confiable(request.auth))
 
 
@@ -485,11 +565,16 @@ def logros(request):
 def beneficios(request):
     """Todas las tarjetas de sellos y cupones del cliente, negocio por negocio."""
     cliente = request.auth
+    confiable = _celular_confiable(cliente)
+    seguidos = set(Seguimiento.objects.filter(cliente=cliente).values_list("consultorio_id", flat=True))
     tarjetas, cupones = [], []
     for c in _mis_consultorios(cliente):
-        t = fidelidad.tarjeta(c, cliente.celular)
-        if t["activa"]:
-            tarjetas.append({"negocio": {"slug": c.slug, "nombre": c.nombre}, **t})
-        for cupon in fidelidad.cupones_para(c, cliente.celular):
+        if confiable:  # los sellos se guardan por número: sin probarlo podrían ser de otra persona
+            t = fidelidad.tarjeta(c, cliente.celular)
+            if t["activa"]:
+                tarjetas.append({"negocio": {"slug": c.slug, "nombre": c.nombre}, **t})
+        elif c.pk not in seguidos:
+            continue
+        for cupon in fidelidad.cupones_para(c, cliente.celular, seguidor=c.pk in seguidos):
             cupones.append({"negocio": {"slug": c.slug, "nombre": c.nombre}, **fidelidad.cupon_publico(cupon)})
     return {"tarjetas": tarjetas, "cupones": cupones, "codigo_referido": cliente.codigo_referido}

@@ -13,7 +13,7 @@ from agenda.models import Tratamiento
 from citas.models import Paciente
 from citas.servicios import a_centimos
 from clientes import fidelidad
-from clientes.models import Campana, Canje, Cliente, Cupon, CuponUsado, Sello, Segmento
+from clientes.models import Campana, Canje, Cliente, Cupon, CuponUsado, Seguimiento, Sello, Segmento
 from consultorios.permisos import solo_general
 from denticita.errores import ErrorNegocio
 
@@ -229,7 +229,20 @@ def _destinatarios(consultorio, segmento: str):
         Cliente.objects.filter(celular__in=[p.celular for p in pacientes], activo=True, dispositivos__isnull=False)
         .values_list("celular", flat=True)
     )
+    if segmento == Segmento.TODOS:
+        # Quienes siguen al negocio en la app y aceptaron sus promociones, aunque aún no tengan una visita.
+        con_app |= set(
+            Seguimiento.objects.filter(
+                consultorio=consultorio, promos=True, cliente__activo=True, cliente__dispositivos__isnull=False
+            )
+            .exclude(cliente__celular__in=silenciados)
+            .values_list("cliente__celular", flat=True)
+        )
     return pacientes, con_app
+
+
+def _total(pacientes, con_app: set[str]) -> int:
+    return len({p.celular for p in pacientes} | con_app)
 
 
 @router.get("/campanas")
@@ -257,7 +270,7 @@ def campanas(request):
 @router.get("/campanas/previa")
 def previa(request, segmento: str = Segmento.TODOS):
     pacientes, con_app = _destinatarios(request.auth.consultorio, segmento)
-    return {"destinatarios": len(pacientes), "con_app": len(con_app)}
+    return {"destinatarios": _total(pacientes, con_app), "con_app": len(con_app)}
 
 
 @router.post("/campanas", response={201: dict})
@@ -288,7 +301,7 @@ def enviar_campana(request, datos: CampanaEntrada):
         mensaje=mensaje[:300],
         segmento=datos.segmento,
         cupon=cupon,
-        destinatarios=len(pacientes),
+        destinatarios=_total(pacientes, con_app),
         con_app=len(con_app),
     )
     if con_app:
@@ -299,7 +312,7 @@ def enviar_campana(request, datos: CampanaEntrada):
             sorted(con_app),
             f"{consultorio.nombre}: {campana.titulo}",
             campana.mensaje,
-            {"tipo": "campana", "negocio": consultorio.slug},
+            {"tipo": "campana", "negocio": consultorio.slug, **({"cupon_id": cupon.pk} if cupon else {})},
             consultorio.pk,
         )
     extra = f"\nUsa el código {cupon.codigo} (vence el {cupon.vence_el:%d/%m})." if cupon else ""
@@ -313,4 +326,4 @@ def enviar_campana(request, datos: CampanaEntrada):
         for p in pacientes
         if p.celular not in con_app
     ]
-    return 201, {"id": campana.pk, "destinatarios": len(pacientes), "con_app": len(con_app), "sin_app": sin_app}
+    return 201, {"id": campana.pk, "destinatarios": campana.destinatarios, "con_app": len(con_app), "sin_app": sin_app}

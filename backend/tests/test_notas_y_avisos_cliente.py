@@ -223,7 +223,7 @@ def test_al_confirmar_el_aviso_lleva_la_cuenta_que_reservo(
 
 def test_logros_de_una_cuenta_nueva_estan_todos_por_lograr():
     datos = ApiCliente(_cuenta()).get("/logros").json()
-    assert datos["visitas"] == 0 and datos["puntos"] == 0 and datos["racha"] == 0
+    assert datos["visitas"] == 0 and "puntos" not in datos and datos["racha"] == 0
     assert not any(l["logrado"] for l in datos["logros"])
     assert datos["nivel"] == {"nombre": "Nueva", "siguiente": "Habitual", "faltan": 3, "progreso": 0.0}
 
